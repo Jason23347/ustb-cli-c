@@ -1,0 +1,11 @@
+/* Package info */
+#define PACKAGE_NAME "@PROJECT_NAME@"
+#define PACKAGE_VERSION "@PROJECT_VERSION@"
+
+/* Define to 1 if debugging is disabled */
+#cmakedefine NDEBUG 1
+
+#cmakedefine WITH_COLOR 1
+#cmakedefine WITH_ACCOUNT 1
+#cmakedefine WITH_BALANCE 1
+#cmakedefine WITH_SPEEDTEST 1
