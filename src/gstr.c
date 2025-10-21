@@ -63,13 +63,13 @@ gstr_appendf(gstr_t *str, const char *fmt, ...) {
 
 int
 gstr_extract(void *dest, const char *src, const gstr_t *fmt,
-                const gstr_t *prefix, int quoted) {
+             const gstr_t *prefix, int quoted) {
     int res = 0;
 
     size_t len = prefix->len + fmt->len + 4;
     char buffer[len];
 
-    gstr_t *tmp = gstr_from_buf(buffer);
+    gstr_t tmp[1] = {gstr_from_buf(buffer)};
     gstr_appendf(tmp, "%s=", prefix->s);
 
     char *p = strstr(src, tmp->s);

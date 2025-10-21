@@ -250,7 +250,7 @@ cmd_login(int argc, char **argv) {
     // Fix env filepath
     if (config->env_filepath == NULL) {
         // fallback to default env
-        gstr_t *home_str = gstr_from_buf(filepath_buf);
+        gstr_t home_str[1] = {gstr_from_buf(filepath_buf)};
         int res = get_defule_env_path(home_str);
         if (res != 0) {
             return -1;
@@ -274,7 +274,7 @@ cmd_login(int argc, char **argv) {
 
     // Assemble URL path
     char buf[MAX_PATH_LEN] = {0};
-    gstr_t *path = gstr_from_buf(buf);
+    gstr_t path[1] = {gstr_from_buf(buf)};
     res = login_url_path(config, path);
     if (res != 0) {
         return EXIT_FAILURE;

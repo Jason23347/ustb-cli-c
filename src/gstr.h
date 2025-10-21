@@ -24,7 +24,7 @@ typedef struct {
             .len = strlen(buf),                                                \
             .cap = _cap,                                                       \
         };                                                                     \
-        &_g;                                                                   \
+        _g;                                                                   \
     })
 
 #define gstr_from_const(str)                                                   \
