@@ -6,6 +6,7 @@
 #include "calc/flow.h"
 #include "gstr.h"
 #include "net/http.h"
+#include "terminal.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -62,7 +63,7 @@ info_print(const info_t *info) {
     flow_format(info->curr_flow, flow_str, sizeof(flow_str));
     flow_format(info->curr_flow_v6, flow_v6_str, sizeof(flow_v6_str));
 
-    printf("IPV4\n");
+    printf(color(BLUE) "IPV4" color(NORMAL) "\n");
     printf("IP Address:\t%.*s\n", (int)sizeof(info->ipv4_addr),
            info->ipv4_addr);
     printf("Flow used:\t%s\n", flow_str);
@@ -75,7 +76,7 @@ info_print(const info_t *info) {
     if (!info_has_ipv6(info)) {
         printf("IPV6 disabled\n");
     } else {
-        printf("IPV6\n");
+        printf(color(GREEN) "IPV6" color(NORMAL) "\n");
         printf("IP Address:\t%.*s\n", (int)sizeof(info->ipv6_addr),
                info->ipv6_addr);
         printf("Flow used:\t%s\n", flow_v6_str);
@@ -102,6 +103,7 @@ cmd_info(int argc, char **argv) {
 
 int
 cmd_fee(int argc, char **argv) {
+    int color;
     uint64_t curr_flow;
     uint64_t fee_num;
     char fee_str[16];
@@ -127,13 +129,23 @@ cmd_fee(int argc, char **argv) {
     uint64_t over = flow_over(curr_flow);
     if (over <= 0) {
         fee_format(fee_str, sizeof(fee_str), fee_cost(curr_flow));
-        printf("Money Cost: ￥%.*s\n", (int)sizeof(fee_str), fee_str);
+        color = cost_color(fee_str);
+        printf("Money Cost: ");
+        set_color(color);
+        printf("￥%.*s", (int)sizeof(fee_str), fee_str);
+        set_color(NORMAL);
+        printf("\n");
     } else {
-        printf("Money Cost: ￥0\n");
+        printf("Money Cost: " color(GREEN) "￥0" color(NORMAL) "\n");
     }
 
     fee_format(fee_str, sizeof(fee_str), fee_num);
-    printf("Money Left: ￥%.*s\n", (int)sizeof(fee_str), fee_str);
+    color = balance_color(fee_str);
+    printf("Money Left: ");
+    set_color(color);
+    printf("￥%.*s", (int)sizeof(fee_str), fee_str);
+    set_color(NORMAL);
+    printf("\n");
 
     printf("\n");
 

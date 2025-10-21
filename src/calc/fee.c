@@ -2,12 +2,11 @@
 
 #include "fee.h"
 
-#include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 #include "flow.h"
+#include "terminal.h"
 
 #define YUAN 1000
 
@@ -20,4 +19,40 @@ fee_cost(uint64_t flowKB) {
     } else {
         return 0;
     }
+}
+
+int
+cost_color(const char *fee_str) {
+#ifdef WITH_COLOR
+    double fee = atof(fee_str);
+    if (fee < 10) {
+        return GREEN;
+    } else if (fee < 30) {
+        return BLUE;
+    } else if (fee < 50) {
+        return YELLOW;
+    } else {
+        return RED;
+    }
+#else
+    return 0;
+#endif
+}
+
+int
+balance_color(const char *fee_str) {
+#ifdef WITH_COLOR
+    double fee = atof(fee_str);
+    if (fee > 30) {
+        return GREEN;
+    } else if (fee > 10) {
+        return BLUE;
+    } else if (fee > 3) {
+        return YELLOW;
+    } else {
+        return RED;
+    }
+#else
+    return 0;
+#endif
 }

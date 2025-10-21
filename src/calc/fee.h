@@ -12,5 +12,7 @@ fee_format(char *str, size_t len, unsigned fee) {
 }
 
 unsigned fee_cost(uint64_t flowKB);
+int cost_color(const char *fee_str);
+int balance_color(const char *fee_str);
 
 #endif /* FEE_H */

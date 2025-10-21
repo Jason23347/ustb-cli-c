@@ -5,10 +5,8 @@
 
 #ifdef WITH_COLOR
 
-#define NORMAL 0
-#define BG_NORMAL                                                              \
-    ;                                                                          \
-    NORMAL
+#define NORMAL    0
+#define BG_NORMAL ;NORMAL
 
 #define BLACK     30
 #define RED       31
@@ -32,8 +30,8 @@
 
 #define color(code) "\033[" STR(code) "m"
 
-#define set_color(c)  printf(color(% d), c)
-#define reset_color() printf(color(NORMAL; NORMAL))
+#define set_color(c)  printf(color(%d), c)
+#define reset_color() printf(color(NORMAL;NORMAL))
 
 #else /* WITH_COLOR */
 
