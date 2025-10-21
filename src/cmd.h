@@ -1,6 +1,10 @@
 #ifndef CMD_H
 #define CMD_H
 
+#include "config.h"
+
+#include <cargs.h>
+
 #include <stddef.h>
 
 typedef int (*cmd_func_t)(int argc, char **argv);
@@ -9,10 +13,15 @@ struct cmd_option {
     const char name[16];
     const char description[32];
     cmd_func_t cmd_func;
+    cmd_func_t cmd_help;
 };
 
-extern const struct cmd_option *const cmd_options;
-extern const size_t cmd_options_count;
+extern struct globconf {
+    int need_help;
+#ifdef WITH_COLOR
+    int raw_output; /* Output no color */
+#endif
+} global_config;
 
 int cmd_parse(int argc, char **argv);
 // default
@@ -28,5 +37,8 @@ int cmd_whoami(int argc, char **argv);
 // speedtest
 int cmd_speedtest(int argc, char **argv);
 int cmd_monitor(int argc, char **argv);
+
+int print_command_help(int argc, char **argv, const struct cag_option *cmd_opts,
+                       size_t cmd_opt_count);
 
 #endif /* CMD_H */

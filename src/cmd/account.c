@@ -32,13 +32,13 @@ static struct cag_option login_options[] = {
         .value_name = "USE_IPV6",
         .description = "Enable IPV6 or not, default true",
     },
-    {
-        .identifier = 'h',
-        .access_letters = "h",
-        .access_name = "help",
-        .description = "Shows the command help",
-    },
 };
+
+int
+print_login_help(int argc, char **argv) {
+    return print_command_help(argc, argv, login_options,
+                              CAG_ARRAY_SIZE(login_options));
+}
 
 typedef struct login {
     int use_ipv6;
@@ -172,16 +172,9 @@ login_get_config(login_t *config, int argc, char **argv) {
                 config->use_ipv6 = (cmp == 0);
             }
             break;
-        case 'h':
-            printf("Options:\n");
-            cag_option_print(login_options, CAG_ARRAY_SIZE(login_options),
-                             stdout);
-            exit(EXIT_SUCCESS);
         case '?':
             cag_option_print_error(&context, stdout);
-            printf("Options:\n");
-            cag_option_print(login_options, CAG_ARRAY_SIZE(login_options),
-                             stdout);
+            print_login_help(argc + 1, argv - 1);
             return -1;
         }
     }

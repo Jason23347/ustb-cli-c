@@ -4,18 +4,23 @@
 
 #include "terminal.h"
 
+#include <cargs.h>
+
 #include <stdio.h>
 #include <string.h>
 
-extern const struct cmd_option *const cmd_options;
-extern const size_t cmd_options_count;
+extern int print_default_help(int argc, char **argv);
+extern int print_login_help(int argc, char **argv);
 
-const struct cmd_option _ustb_cmd_options[] = {
+extern struct globconf global_config;
+
+const struct cmd_option commands[] = {
 #ifdef WITH_ACCOUNT
     {
         .name = "login",
         .description = "Login to USTB web",
         .cmd_func = &cmd_login,
+        .cmd_help = &print_login_help,
     },
 #endif
 #ifdef WITH_ACCOUNT
@@ -23,6 +28,7 @@ const struct cmd_option _ustb_cmd_options[] = {
         .name = "logout",
         .description = "Logout from USTB web",
         .cmd_func = &cmd_logout,
+        .cmd_help = &print_default_help,
     },
 #endif
 #ifdef WITH_ACCOUNT
@@ -30,6 +36,7 @@ const struct cmd_option _ustb_cmd_options[] = {
         .name = "whoami",
         .description = "Show current user",
         .cmd_func = &cmd_whoami,
+        .cmd_help = &print_default_help,
     },
 #endif
 #ifdef WITH_BALANCE
@@ -37,6 +44,7 @@ const struct cmd_option _ustb_cmd_options[] = {
         .name = "info",
         .description = "Show account info",
         .cmd_func = &cmd_info,
+        .cmd_help = &print_default_help,
     },
 #endif
 #ifdef WITH_BALANCE
@@ -44,6 +52,7 @@ const struct cmd_option _ustb_cmd_options[] = {
         .name = "fee",
         .description = "Show money cost for this month",
         .cmd_func = &cmd_fee,
+        .cmd_help = &print_default_help,
     },
 #endif
 #ifdef WITH_SPEEDTEST
@@ -51,37 +60,90 @@ const struct cmd_option _ustb_cmd_options[] = {
         .name = "speedtest",
         .description = "Test speed inside USTB web",
         .cmd_func = &cmd_speedtest,
+        .cmd_help = &print_default_help,
     },
     {
         .name = "monitor",
         .description = "Monitor flow download speed",
         .cmd_func = &cmd_monitor,
+        .cmd_help = &print_default_help,
     },
 #endif
     {
         .name = "version",
         .description = "Print version and copyright",
         .cmd_func = &cmd_version,
+        .cmd_help = NULL,
     },
     {
         .name = "help",
         .description = "Print this help message",
         .cmd_func = &cmd_help,
+        .cmd_help = NULL,
     },
 };
-const struct cmd_option *const cmd_options = _ustb_cmd_options;
-const size_t cmd_options_count =
-    sizeof(_ustb_cmd_options) / sizeof(struct cmd_option);
+
+const size_t command_count = sizeof(commands) / sizeof(commands[0]);
+
+const struct cag_option global_options[] = {
+    {
+        .identifier = 'h',
+        .access_letters = "h",
+        .access_name = "help",
+        .value_name = NULL,
+        .description = "Print command help message",
+    },
+#ifdef WITH_COLOR
+    {
+        .identifier = 'r',
+        .access_letters = "r",
+        .access_name = "raw-output",
+        .value_name = NULL,
+        .description = "Print plain text instead of colorful output",
+    },
+#endif
+};
+
+struct globconf global_config = {
+    .need_help = 0,
+#ifdef WITH_COLOR
+    .raw_output = 1,
+#endif
+};
 
 int
 cmd_help(int argc, char **argv) {
     printf("Usage: %s <command> [options]\n", argv[0]);
     printf("Commands:\n");
-    for (size_t i = 0; i < cmd_options_count; i++) {
-        printf("  %-10s %s\n", cmd_options[i].name, cmd_options[i].description);
+    for (size_t i = 0; i < command_count; i++) {
+        printf("  %-10s %s\n", commands[i].name, commands[i].description);
     }
+    printf("\nGlobal Options:\n");
+    cag_option_print(global_options, CAG_ARRAY_SIZE(global_options), stdout);
 
     return 0;
+}
+
+int
+print_command_help(int argc, char **argv, const struct cag_option *cmd_opts,
+                   size_t cmd_opt_count) {
+    const char *scriptname = argv[0];
+    const char *command = argv[1];
+
+    printf("Usage: %s %s [options]\n", scriptname, command);
+    if (cmd_opts != NULL && cmd_opt_count > 0) {
+        printf("Options:\n");
+        cag_option_print(cmd_opts, cmd_opt_count, stdout);
+    }
+    printf("\nGlobal Options:\n");
+    cag_option_print(global_options, CAG_ARRAY_SIZE(global_options), stdout);
+
+    return 0;
+}
+
+int
+print_default_help(int argc, char **argv) {
+    return print_command_help(argc, argv, NULL, 0);
 }
 
 int
@@ -131,15 +193,62 @@ cmd_version(int argc, char **argv) {
     return 0;
 }
 
+static void
+global_config_parse(int argc, char **argv) {
+    cag_option_context context;
+    cag_option_init(&context, global_options, CAG_ARRAY_SIZE(global_options),
+                    argc, argv);
+    while (cag_option_fetch(&context)) {
+        switch (cag_option_get_identifier(&context)) {
+#ifdef WITH_COLOR
+        case 'r':
+            const char *value = cag_option_get_value(&context);
+            if (value == NULL || strlen(value) == 0) {
+                /* Keep as default */
+            } else {
+                const char zero[] = "0";
+                if (strncmp(value, zero, sizeof(zero)) != 0) {
+                    global_config.raw_output = 1;
+                } else {
+                    global_config.raw_output = 0;
+                }
+            }
+            break;
+#endif /* WITH_COLOR */
+        case 'h':
+            global_config.need_help = 1;
+            break;
+        case '?':
+            /* Let them go */
+            break;
+        }
+    }
+}
+
 int
 cmd_parse(int argc, char **argv) {
-    for (size_t i = 0; i < cmd_options_count; i++) {
-        if (strcmp(argv[1], cmd_options[i].name) == 0) {
-            cmd_func_t func = cmd_options[i].cmd_func;
-            return (*func)(argc - 1, argv + 1);
+    const char *command = argv[1];
+
+    /* Shift args */
+    argc--;
+    argv++;
+
+    global_config_parse(argc, argv);
+
+    for (size_t i = 0; i < command_count; i++) {
+        if (strcmp(command, commands[i].name) == 0) {
+            cmd_func_t cmd_func = commands[i].cmd_func;
+            cmd_func_t cmd_help = commands[i].cmd_help;
+            if (global_config.need_help) {
+                if (cmd_help != NULL) {
+                    return (*cmd_help)(argc + 1, argv - 1);
+                }
+            } else {
+                return (*cmd_func)(argc, argv);
+            }
         }
     }
 
     // fallback to print usage info
-    return cmd_help(argc, argv);
+    return cmd_help(argc + 1, argv - 1);
 }
