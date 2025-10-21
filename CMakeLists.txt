@@ -10,7 +10,7 @@ endif()
 
 set(CMAKE_C_FLAGS "-Wall -Wno-unused-variable")
 set(CMAKE_C_FLAGS_DEBUG "-g -O0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -s -w")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -s -w -flto")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2")
 
 configure_file(

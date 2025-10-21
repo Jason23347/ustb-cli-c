@@ -61,42 +61,28 @@ gstr_appendf(gstr_t *str, const char *fmt, ...) {
     return written;
 }
 
-const char *
-strmatch(const char *str, const char *pattern, size_t size) {
-    const char *p = str;
-    do {
-        p = strchr(p + 1, pattern[0]);
-        if (p == 0) {
-            return 0;
-        }
-    } while (strncmp(p, pattern, size - 1) != 0);
-
-    return p;
-}
-
 int
-extract_between(char *dest, const char *src,           //
-                const char *prefix, size_t prefix_len, //
-                const char suffix,                     //
-                size_t maxlen) {
-    const char *match = strmatch(src, prefix, prefix_len);
-    const char *start = &match[prefix_len - 1];
-    if (!start) {
+gstr_extract(void *dest, const char *src, const gstr_t *fmt,
+                const gstr_t *prefix, int quoted) {
+    int res = 0;
+
+    size_t len = prefix->len + fmt->len + 4;
+    char buffer[len];
+
+    gstr_t *tmp = gstr_from_buf(buffer);
+    gstr_appendf(tmp, "%s=", prefix->s);
+
+    char *p = strstr(src, tmp->s);
+    if (p == NULL) {
         return -1;
     }
-
-    const char *end = strchr(start, suffix);
-    if (!end) {
-        return -1;
+    if (quoted) {
+        gstr_appendf(tmp, "'%s'", fmt->s);
+    } else {
+        gstr_appendf(tmp, "%s", fmt->s);
     }
 
-    int len = end - start;
-    if (len > maxlen) {
-        len = maxlen;
-    }
+    res = sscanf(p, tmp->s, dest);
 
-    strncpy(dest, start, len);
-    dest[len] = '\0';
-
-    return len;
+    return res;
 }

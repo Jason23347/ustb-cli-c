@@ -12,6 +12,8 @@ set(CMAKE_FIND_ROOT_PATH "${TARGET_DIR}")
 
 set(CMAKE_C_COMPILER "${TOOLCHAIN_DIR}/bin/aarch64-openwrt-linux-musl-gcc")
 set(CMAKE_CXX_COMPILER "${TOOLCHAIN_DIR}/bin/aarch64-openwrt-linux-musl-g++")
+set(CMAKE_AR "${TOOLCHAIN_DIR}/bin/aarch64-openwrt-linux-musl-gcc-ar")
+set(CMAKE_RANLIB "${TOOLCHAIN_DIR}/bin/aarch64-openwrt-linux-musl-gcc-ranlib")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

@@ -5,12 +5,12 @@
 #include "gstr.h"
 #include "net/http.h"
 
+#include <cargs.h>
+
 #include <pwd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <cargs.h>
 
 #define MAX_LINE_LEN            128
 #define MAX_VAR_LEN             40
@@ -326,10 +326,7 @@ cmd_whoami(int argc, char **argv) {
     }
 
     char username[MAX_VAR_LEN];
-    const char prefix[] = "uid='";
-    char suffix = '\'';
-    res = extract_between(username, http->buff, prefix, sizeof(prefix), suffix,
-                          MAX_VAR_LEN);
+    res = extract(username, http->buff, "%s", "uid", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }

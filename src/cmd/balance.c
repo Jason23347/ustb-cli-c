@@ -13,7 +13,7 @@
 typedef struct info {
     uint64_t curr_flow;
     uint64_t curr_flow_v6;
-    char ipv4_addr[16];
+    char ipv4_addr[15];
     char ipv6_addr[39];
     int ipv6_mode;
     unsigned fee;
@@ -36,31 +36,21 @@ info_fetch(info_t *info) {
         return -1;
     }
 
-    const char *str, *p = strpos(http->buff, "<script");
-    if (p == 0) {
+    const char *p = strstr(http->buff, "<script");
+    if (p == NULL) {
         return -1;
     }
 
-    strscan(str, "flow='", uint64_spec, info->curr_flow);
-    strscan(str, "v6df=", uint64_spec, info->curr_flow_v6);
-    strscan(str, "v46m=", "%u", info->ipv6_mode);
-    strscan(str, "fee='", "%u", info->fee);
+    extract(&info->curr_flow, p, uint64_spec, "flow", 1);
+    extract(&info->curr_flow_v6, p, uint64_spec, "v6df", 0);
+    extract(&info->ipv6_mode, p, "%u", "v46m", 0);
+    extract(&info->fee, p, "%u", "fee", 1);
 
+    /* FIXME: Don't know why */
     info->curr_flow_v6 /= 4;
 
-    char prefix_ip[] = "v4ip='";
-    char suffix_ip = '\'';
-    extract_between(info->ipv4_addr, p,           //
-                    prefix_ip, sizeof(prefix_ip), //
-                    suffix_ip,                    //
-                    sizeof(info->ipv4_addr));
-
-    // make it "v6ip='"
-    prefix_ip[1] = '6';
-    extract_between(info->ipv6_addr, p,           //
-                    prefix_ip, sizeof(prefix_ip), //
-                    suffix_ip,                    //
-                    sizeof(info->ipv6_addr));
+    extract(&info->ipv4_addr, p, "%15[^']", "v4ip", 1);
+    extract(&info->ipv6_addr, p, "%39[^']", "v6ip", 1);
 
     return 0;
 }
@@ -125,14 +115,14 @@ cmd_fee(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    const char *str, *p = strpos(http->buff, "<script");
-    if (p == 0) {
+    const char *p = strstr(http->buff, "<script");
+    if (p == NULL) {
         debug("failed to get variables: %s\n", http->buff);
         return EXIT_FAILURE;
     }
 
-    strscan(str, "flow='", uint64_spec, curr_flow);
-    strscan(str, "fee='", uint64_spec, fee_num);
+    extract(&curr_flow, p, uint64_spec, "flow", 1);
+    extract(&fee_num, p, uint64_spec, "fee", 1);
 
     uint64_t over = flow_over(curr_flow);
     if (over <= 0) {

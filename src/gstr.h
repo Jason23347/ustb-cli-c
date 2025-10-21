@@ -18,6 +18,7 @@ typedef struct {
         static_assert(!__builtin_types_compatible_p(typeof(buf), char *),      \
                       "buf must be a char array, not a pointer");              \
         size_t _cap = sizeof(buf);                                             \
+        buf[0] = '\0';                                                         \
         gstr_t _g = {                                                          \
             .s = (buf),                                                        \
             .len = strlen(buf),                                                \
@@ -29,23 +30,11 @@ typedef struct {
 #define gstr_from_const(str)                                                   \
     (gstr_t) { .s = (char *)(str), .len = strlen(str), .cap = strlen(str) + 1, }
 
-/* 简约的写法，应当仅仅用于静态变量 */
-#define strpos(str, pattern) strmatch(str, pattern, sizeof(pattern))
-/* 根据fmt读取pattern首次匹配str后面的内容到prop中 */
-#define strscan(str, pattern, fmt, prop)                                       \
-    {                                                                          \
-        str = strpos(p, pattern);                                              \
-        if (!str) {                                                            \
-            return -1;                                                         \
-        }                                                                      \
-        sscanf(str + sizeof(pattern) - 1, fmt, &prop);                         \
-    }
-
-int extract_between(char *dest, const char *src,           //
-                    const char *prefix, size_t prefix_len, //
-                    const char suffix,                     //
-                    size_t maxlen);
-const char *strmatch(const char *str, const char *pattern, size_t size);
+#define extract(dest, src, fmt, prefix, quoted)                                \
+    gstr_extract((dest), (src), &gstr_from_const(fmt),                         \
+                 &gstr_from_const(prefix), (quoted))
+int gstr_extract(void *dest, const char *src, const gstr_t *fmt,
+                 const gstr_t *prefix, int quoted);
 
 int gstr_init(gstr_t *str, size_t maxlen);
 void gstr_free(gstr_t *str);
