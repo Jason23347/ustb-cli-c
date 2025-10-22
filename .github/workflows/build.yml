@@ -1,0 +1,64 @@
+name: CMake Matrix Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build (${{ matrix.toolchain }}, ${{ matrix.build_type }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [ "noop", "aarch64-toolchain.cmake", "aarch64-openwrt-toolchain.cmake" ]
+        build_type: [ Debug, Release, RelWithDebInfo ]
+        with_balance: [ on, off ]
+        with_color: [ on, off ]
+        with_account: [ on, off ]
+        with_speedtest: [ on, off ]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake make g++ ninja-build
+
+      # 自动设置 OpenWrt SDK 环境
+      - name: Setup ImmortalWrt SDK
+        if: matrix.toolchain == 'aarch64-openwrt-toolchain.cmake'
+        uses: immortalwrt/gh-action-sdk@master
+        env:
+          ARCH: aarch64_generic
+
+      - name: Configure (CMake)
+        run: |
+          mkdir -p build
+          cd build
+          if [ "${{ matrix.toolchain }}" = "noop" ]; then
+            echo "Building natively (no toolchain)..."
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DWITH_BALANCE=${{ matrix.with_balance }} \
+              -DWITH_COLOR=${{ matrix.with_color }} \
+              -DWITH_ACCOUNT=${{ matrix.with_account }} \
+              -DWITH_SPEEDTEST=${{ matrix.with_speedtest }}
+          else
+            echo "Building with toolchain: ${{ matrix.toolchain }}"
+            cmake .. \
+              -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }} \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DWITH_BALANCE=${{ matrix.with_balance }} \
+              -DWITH_COLOR=${{ matrix.with_color }} \
+              -DWITH_ACCOUNT=${{ matrix.with_account }} \
+              -DWITH_SPEEDTEST=${{ matrix.with_speedtest }}
+          fi
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
