@@ -7,15 +7,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 极简版请求，因为随便发点就能从学校服务器得到返回 */
-static int
+int
+http_connect(http_t *http) {
+    int res =
+        tcp_connect(&http->conn, http->domain, http->port, http->ipv6_only);
+    if (res != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int
 http_request(const http_t *http, const gstr_t *path) {
-    /* 但是Host请求头是增加幸福感的关键，不能删掉 */
+    /* Host请求头是增加幸福感的关键，不能删掉 */
     const char method[] = "GET";
-    size_t req_len = path->len + 16 + sizeof(method) + sizeof(http->domain);
+    size_t req_len = path->len + 24 + sizeof(method) + sizeof(http->domain);
     char req[req_len];
     snprintf(req, req_len,
-             "GET %s\r\n"
+             "GET %s HTTP/1.1\r\n"
              "Host: %s\r\n"
              "\r\n",
              path->s, http->domain);
@@ -28,12 +38,13 @@ http_request(const http_t *http, const gstr_t *path) {
 }
 
 size_t
-http_readline(const tcp_t *tcp, char *line, size_t maxlen) {
+http_readline(const http_t *http, size_t maxlen) {
+    char *buf = http->buff;
     char c;
     char *p;
     int flag = 0;
-    for (p = line; tcp_read(tcp, &c, sizeof(c)) > 0; p++) {
-        if (p - line < maxlen) {
+    for (p = buf; tcp_read(&http->conn, &c, sizeof(c)) > 0; p++) {
+        if (p - buf < maxlen) {
             if (c >= 'A' && c <= 'Z') {
                 c += 0x20;
             }
@@ -57,7 +68,56 @@ http_readline(const tcp_t *tcp, char *line, size_t maxlen) {
 
     *p = '\0';
 
-    return p - line;
+    return p - buf;
+}
+
+size_t
+http_read(http_t *http, size_t len) {
+    return tcp_read(&http->conn, http->buff, len);
+}
+
+void
+http_close(const http_t *http) {
+    tcp_close(&http->conn);
+}
+
+const char *
+http_header(const http_t *http, size_t maxlen, const char *header) {
+    assert(header != NULL);
+
+    size_t len;
+    size_t used = 0;
+    char *match = NULL;
+    char *buf = http->buff;
+
+    while (1) {
+        len = http_readline(http, maxlen - used);
+        if (len <= 0) { // empty line
+            break;
+        }
+
+        match = strstr(buf, header);
+        if (match != NULL) {
+            match += strlen(header);
+            break;
+        }
+
+        used += len;
+    }
+
+    return match;
+}
+
+void
+http_skip_section(const http_t *http, size_t maxlen) {
+    size_t used = 0;
+    while (1) {
+        size_t len = http_readline(http, maxlen - used);
+        if (len == 0) {
+            break;
+        }
+        used += len;
+    }
 }
 
 int
@@ -65,11 +125,9 @@ http_get(http_t *http, const gstr_t *path) {
     assert(path->s[0] == '/');
     assert(http->buff == NULL);
 
-    const char *slen;
     size_t len;
 
-    int res =
-        tcp_connect(&http->conn, http->domain, http->port, http->ipv6_only);
+    int res = http_connect(http);
     if (res != 0) {
         return -1;
     }
@@ -79,49 +137,35 @@ http_get(http_t *http, const gstr_t *path) {
         return -1;
     }
 
-    /* 从header段取content-length */
-    char buff[MAX_BUFF_SIZE];
-    char *line = buff;
-
-    while (1) {
-        size_t used = line - buff;
-        len = http_readline(&http->conn, line, sizeof(buff) - used);
-        if (len <= 0) { // empty line
-            break;
-        }
-
-        const char content_length[] = "content-length";
-        char *match = strstr(line, content_length);
-        if (match != NULL) {
-            slen = match + sizeof(content_length);
-            break;
-        }
-
-        line += len;
-    }
-
+    /* 取content-length */
+    char buf[MAX_BUF_SIZE];
+    http->buff = buf;
+    const char *slen = http_header(http, sizeof(buf), "content-length:");
     if (slen == NULL) {
         /**
          * 如果没设置content-length，直接返回当前body字符串。
          * 虽然有的\r被替换成0，但是目前只需兼容cippv6，不影响。
          */
-        len = line - buff;
+        len = strlen(buf);
         http->buff = malloc(len);
         if (http->buff == NULL) {
             return -1;
         }
-        strncpy(http->buff, buff, len);
+        strncpy(http->buff, buf, len);
     } else {
         /* 如果设置了content-length，再读一些字节 */
-        len = atoi(slen);
+        len = atol(slen);
+        /* 但是首先要把header过掉 */
+        http_skip_section(http, sizeof(buf));
+
         http->buff = malloc(len);
         if (http->buff == NULL) {
             return -1;
         }
-        tcp_read(&http->conn, http->buff, len);
+        http_read(http, len);
     }
 
-    tcp_close(&http->conn);
+    http_close(http);
 
     return 0;
 }

@@ -104,13 +104,25 @@ flow_over(uint64_t flowKB) {
 }
 
 void
-flow_format_speed(uint64_t flowKB, char *str, size_t len) {
-    if (flowKB <= 1 * KB) {
-        snprintf(str, len, "0 KB/s");
-    } else if (flowKB < 1000 * KB) {
-        snprintf(str, len, uint64_spec " KB/s", flowKB);
+flow_format_speed(uint64_t flowKB, char *str, size_t len, int bits) {
+    if (bits) {
+        uint64_t flowBits = flowKB * 8;
+        if (flowKB <= 1 * KB) {
+            snprintf(str, len, "0 Kbps");
+        } else if (flowKB < 1000 * KB) {
+            snprintf(str, len, uint64_spec " Kbps", flowBits);
+        } else {
+            snprintf(str, len, uint64_spec " Mbps",
+                     round(uint64_t, (double)flowBits / MB));
+        }
     } else {
-        snprintf(str, len, "%.2lf MB/s", (double)flowKB / MB);
+        if (flowKB <= 1 * KB) {
+            snprintf(str, len, "0 KB/s");
+        } else if (flowKB < 1000 * KB) {
+            snprintf(str, len, uint64_spec " KB/s", flowKB);
+        } else {
+            snprintf(str, len, "%.2lf MB/s", (double)flowKB / MB);
+        }
     }
 
     return;

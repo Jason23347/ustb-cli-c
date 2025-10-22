@@ -97,7 +97,5 @@ tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
 
 void
 tcp_close(const tcp_t *tcp) {
-    if (tcp->fd > 0) {
-        socket_close(tcp->fd);
-    }
+    socket_close(tcp->fd);
 }

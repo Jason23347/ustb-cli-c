@@ -30,6 +30,6 @@ uint64_t flow_over(uint64_t flowKB);
 uint64_t flow_speed(flow_history_t *history, uint64_t flow);
 int flow_speed_color(uint64_t speedKB);
 void flow_format(uint64_t flowKB, char *buf, size_t size);
-void flow_format_speed(uint64_t flowKB, char *str, size_t len);
+void flow_format_speed(uint64_t flowKB, char *str, size_t len, int bits);
 
 #endif /* CALC_FLOW_H */

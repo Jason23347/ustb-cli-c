@@ -29,8 +29,8 @@ int debugf(const char *fmt, ...);
 #define CIPPV6_PATH             "/get_ip.php"
 #define SPEEDTEST_DOMAIN        "speed.ustb.edu.cn"
 #define SPEEDTEST_PORT          80
-#define SPEEDTEST_UPLOAD_PATH   "/back/empty.php"
-#define SPEEDTEST_DOWNLOAD_PATH "/back/garbage.php"
+#define SPEEDTEST_UPLOAD_PATH   "/backend/empty.php"
+#define SPEEDTEST_DOWNLOAD_PATH "/backend/garbage.php"
 #define USTB_ENV_FILENAME       ".ustb.env"
 #define USTB_USERNAME_VAR       "USTB_USERNAME"
 #define USTB_USERNAME_LEN       sizeof(USTB_USERNAME_VAR)

@@ -1,5 +1,7 @@
 #include "timer.h"
 
+#include <stdlib.h>
+
 #define MILLION 1000000
 
 int
@@ -22,6 +24,16 @@ microsec_interval(struct timeval start, struct timeval end) {
 }
 
 double
-speed_per_sec(uint64_t amount, suseconds_t microsec) {
-    return (double)(amount * MILLION) / microsec;
+micro2sec(suseconds_t microsec) {
+    return (double)microsec / MILLION;
+}
+
+double
+speed_per_sec(uint64_t flowKB, suseconds_t microsec) {
+    return (double)(flowKB * MILLION) / microsec;
+}
+
+double
+random_d() {
+    return (double)(rand()) / RAND_MAX;
 }
