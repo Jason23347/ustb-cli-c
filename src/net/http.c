@@ -146,14 +146,18 @@ http_get(http_t *http, const gstr_t *path) {
          * 如果没设置content-length，再读一行直接返回。
          * 只需兼容 cippv6.ustb.edu.cn/get_ip.php
          */
-        /* 不知为何这里有一行"3a"，何意味啊 */
-        http_readline(http, sizeof(buf));
+        /* 这里有一行"3a"，是十六进制content-length */
         len = http_readline(http, sizeof(buf));
+        if (len <= 0) {
+            http_close(http);
+            return -1;
+        }
+        sscanf(http->buff, "%lx", &len);
         http->buff = malloc(len);
+        http_read(http, len);
         if (http->buff == NULL) {
             return -1;
         }
-        strncpy(http->buff, buf, len);
     } else {
         /* 如果设置了content-length，再读一些字节 */
         len = atol(slen);
