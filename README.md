@@ -1,7 +1,76 @@
-# ustb-cli2
-
-C语言版。
+# ustb-cli (C version)
 
 bash版看这里：https://github.com/Jason23347/ustb-cli
 
-# 编译
+## 性能提升
+
+相比bash版，本项目主打一个小**个屁勒**，原先满打满算9K现在面向x86_64的二进制要25K，面向OpenWrt的二进制要67K……
+运行速度方面也没快多少，经测试，本程序比bash版快大约15%。20ms的提升估计没啥感觉……
+
+### benchmark (whoami)
+```bash
+seq ${NUM:-10} |
+	while read i; do {
+		time ./ustb-cli whoami >/dev/null;
+	} 2>&1; done |
+	grep real |
+	awk -F'm|s' '{sum+=($1*60+$2)} END{print "avg:",sum/NR,"s"}'
+```
+
+| 重复次数（NUM） | C版平均速度 (s) | bash版平均速度 (s) |
+| :-------------: | :-------------: | :----------------: |
+|       10        |      0.149      |       0.176        |
+|       50        |      0.160      |       0.188        |
+|       100       |      0.154      |       0.185        |
+
+### benchmark (info)
+```bash
+seq ${NUM:-10} |
+	while read i; do {
+		time ./ustb-cli info >/dev/null;
+	} 2>&1; done |
+	grep real |
+	awk -F'm|s' '{sum+=($1*60+$2)} END{print "avg:",sum/NR,"s"}'
+```
+
+| 重复次数（NUM） | C版平均速度 (s) | bash版平均速度 (s) |
+| :-------------: | :-------------: | :----------------: |
+|       10        |      0.150      |       0.182        |
+|       50        |      0.150      |       0.185        |
+|       100       |      0.144      |       0.188        |
+
+## 编译
+
+### 本机编译
+
+```shell
+mkdir -p build && cd build
+cmake .. \
+	-DWITH_COLOR=on \
+	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+```
+
+### x86_64交叉编译到ARM64
+
+```shell
+mkdir -p build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
+	-DWITH_COLOR=on \
+	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+```
+
+### 编译到OpenWrt (MUSL)
+
+```shell
+mkdir -p build && cd build
+export STAGING_DIR=<OpenWrt SDK path>/staging_dir
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
+	-DWITH_COLOR=on \
+	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+```
+
+例如我的`OPENWRT_ROOT`为`$HOME/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64`
+
+### 其他平台
+
+你自己写toolchain file吧...
