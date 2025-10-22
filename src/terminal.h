@@ -3,8 +3,6 @@
 
 #include "config.h"
 
-#ifdef WITH_COLOR
-
 #define NORMAL       0
 #define BLACK        30
 #define RED          31
@@ -23,6 +21,8 @@
 #define BG_DARKGREEN 46
 #define BG_WHITE     47
 
+#ifdef WITH_COLOR
+
 #define STR(text) #text
 
 #define color(code) "\033[" STR(code) "m"
@@ -30,20 +30,22 @@
 #define set_color(c)                                                           \
     ((global_config.raw_output == 0) ? printf("\033[%dm", c) : ((void)0))
 #define reset_color()                                                          \
-    (global_config.raw_output == 0) ? printf("\033[%d;%dm", NORMAL, NORMAL)    \
-                                    : ((void)0)
+    ((global_config.raw_output == 0) ? printf("\033[%d;%dm", NORMAL, NORMAL)   \
+                                     : ((void)0))
+
+#define clear_line()                                                           \
+    ((global_config.raw_output == 0) ? printf("\r\033[K") : ((void)0))
+#define move_up_head()                                                         \
+    ((global_config.raw_output == 0) ? printf("\r\033[F") : ((void)0))
 
 #else /* WITH_COLOR */
 
 #define color(...) ""
 #define set_color(...)
 #define reset_color(...)
+#define clear_line(...)
+#define move_up_head(...)
 
 #endif /* WITH_COLOR */
-
-#define clear_line()                                                           \
-    (global_config.raw_output == 0) ? printf("\r\033[K") : ((void)0)
-#define move_up_head()                                                         \
-    (global_config.raw_output == 0) ? printf("\r\033[F") : ((void)0)
 
 #endif /* TERMINAL_H */
