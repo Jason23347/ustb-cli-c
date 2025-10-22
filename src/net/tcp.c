@@ -86,17 +86,17 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ipv6_only) {
 }
 
 size_t
-tcp_read(tcp_t *tcp, void *buffer, size_t size) {
+tcp_read(const tcp_t *tcp, void *buffer, size_t size) {
     return read(tcp->fd, buffer, size);
 }
 
 size_t
-tcp_write(tcp_t *tcp, const void *buffer, size_t size) {
+tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
     return write(tcp->fd, buffer, size);
 }
 
 void
-tcp_close(tcp_t *tcp) {
+tcp_close(const tcp_t *tcp) {
     if (tcp->fd > 0) {
         socket_close(tcp->fd);
     }
