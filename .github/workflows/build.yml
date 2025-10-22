@@ -18,17 +18,23 @@ jobs:
         build_type: [ Debug, Release, RelWithDebInfo ]
         with_balance: [ on, off ]
         with_color: [ on, off ]
-        with_account: [ on, off ]
+        with_account: [ on ]
         with_speedtest: [ on, off ]
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Init submodules
+        run: git submodule update --init --recursive
+
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake make g++ ninja-build
 
-      # 自动设置 OpenWrt SDK 环境
+      - name: Install cross-build dependencies
+        if: matrix.toolchain == 'aarch64-toolchain.cmake'
+        run: sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
       - name: Setup ImmortalWrt SDK
         if: matrix.toolchain == 'aarch64-openwrt-toolchain.cmake'
         uses: immortalwrt/gh-action-sdk@master
