@@ -167,21 +167,24 @@ cmd_version(int argc, char **argv) {
     printf("color");
     reset_color();
 #endif
-    printf(") ");
+    printf(")");
 #endif
 
     printf(
 #ifdef WITH_ACCOUNT
-        "+account"
+        " +account"
 #endif
 
 #ifdef WITH_BALANCE
-        "+balance"
+        " +balance"
+#endif
+#ifdef WITH_SPEEDTEST
+        " +speedtest"
 #endif
 
         "\n\n"
-        "Copyright  2025     \tShuaicheng Zhu "
-        "<jason23347@163.com>\n\n"
+        "Copyright  2025  Shuaicheng Zhu <jason23347@163.com>\n"
+        "\n"
         "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF "
         "ANY KIND, "
         "EXPRESS OR\n"
