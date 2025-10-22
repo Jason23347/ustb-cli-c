@@ -68,13 +68,12 @@ socket_connect(const char *ip, uint16_t port, int is_ipv6) {
     /* set select() time out */
     struct timeval tv = {.tv_sec = SOCKET_TIMEOUT};
     res = select(fd + 1, NULL, &fdset, NULL, &tv);
-
     if (res == -1) {
-        // TODO select error
+        debug("select error\n");
         close(fd);
         return INVALID_SOCKET;
     } else if (res == 0) {
-        // TODO timeout
+        debug("select timed out\n");
         close(fd);
         return INVALID_SOCKET;
     }
