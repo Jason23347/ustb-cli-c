@@ -3,13 +3,12 @@
 #include "cmd.h"
 
 #include "calc/flow.h"
+#include "calc/timer.h"
 #include "net/http.h"
 #include "terminal.h"
 
 #include <assert.h>
 #include <stdlib.h>
-#include <sys/time.h>
-#include <time.h>
 
 int
 cmd_speedtest(int argc, char **argv) {
@@ -31,17 +30,6 @@ http_get_flow(http_t *http, uint64_t *flow) {
     extract(flow, http->buff, uint64_spec, "flow", 1);
 
     return 0;
-}
-
-// sleep using millisec to next rounded second
-static void
-sleep_till_next_sec() {
-    struct timespec ts;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    ts.tv_sec = 0;
-    ts.tv_nsec = (1000000 - tv.tv_usec % 1000000) * 1000;
-    nanosleep(&ts, NULL);
 }
 
 int

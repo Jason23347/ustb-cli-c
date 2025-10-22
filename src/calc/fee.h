@@ -1,5 +1,5 @@
-#ifndef FEE_H
-#define FEE_H
+#ifndef CALC_FEE_H
+#define CALC_FEE_H
 
 #include "text.h"
 
@@ -15,4 +15,4 @@ unsigned fee_cost(uint64_t flowKB);
 int cost_color(const char *fee_str);
 int balance_color(const char *fee_str);
 
-#endif /* FEE_H */
+#endif /* CALC_FEE_H */

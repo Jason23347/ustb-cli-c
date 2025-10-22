@@ -1,5 +1,5 @@
-#ifndef FLOW_H
-#define FLOW_H
+#ifndef CALC_FLOW_H
+#define CALC_FLOW_H
 
 #include <stdint.h>
 #include <sys/time.h>
@@ -14,9 +14,9 @@
 #define TB (1024 * GB)
 
 typedef struct {
-    struct timeval tval;
-    uint64_t download;
-    double speed;
+    struct timeval tval; // time
+    uint64_t download;   // KB
+    double speed;        // KB/s
 } flow_t;
 
 typedef struct {
@@ -32,4 +32,4 @@ int flow_speed_color(uint64_t speedKB);
 void flow_format(uint64_t flowKB, char *buf, size_t size);
 void flow_format_speed(uint64_t flowKB, char *str, size_t len);
 
-#endif /* FLOW_H */
+#endif /* CALC_FLOW_H */

@@ -4,28 +4,13 @@
 
 #include "terminal.h"
 #include "text.h"
+#include "timer.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define FREE_FLOW_KB (FREE_FLOW_GB * GB)
-
-#define MILLION 1000000
-
-/**
- * Calculate weight for time interval,
- * assumed to be never lesser than 0.
- */
-static unsigned
-flow_wight(uint64_t millisec) {
-    if (millisec == 0) {
-        return 100;
-    } else if (millisec < 6000000) {
-        return round(unsigned, 2.36e-12 * millisec * (millisec - 12e6) + 100);
-    } else {
-        return 15;
-    }
-}
+#define FREE_FLOW_KB   (FREE_FLOW_GB * GB)
+#define MAX_FLOW_SPEED (313 * MB)
 
 static inline size_t
 prev_index(size_t idx) {
@@ -48,20 +33,30 @@ flow_speed(flow_history_t *history, uint64_t download) {
     // 更新环形缓冲索引
     history->head = cur_idx;
     if (cur_idx == history->tail) {
-        history->tail = (history->tail + 1) % FLOW_NUM; // 覆盖最老元素
+        // 覆盖最老元素
+        history->tail = (history->tail + 1) % FLOW_NUM;
     }
 
     // 计算速度
-    uint64_t micros = (cur->tval.tv_sec - last->tval.tv_sec) * MILLION +
-                      (cur->tval.tv_usec - last->tval.tv_usec);
-    if (micros == 0) {
-        micros = 1;
+    uint64_t microsec = microsec_interval(last->tval, cur->tval);
+    /* Avoid dividing 0 */
+    if (microsec == 0) {
+        cur->speed = speed_per_sec(cur->download - last->download, 1);
+    } else {
+        cur->speed = speed_per_sec(cur->download - last->download, microsec);
     }
 
-    cur->speed = (double)(cur->download - last->download) / micros;
-
-    uint64_t tmp = round(uint64_t, cur->speed *MILLION);
-    return (tmp > 0 && tmp < 100 * MB) ? tmp : 0;
+    /**
+     * 有时网页bug导致 download == 0.
+     * 此时前一秒速度为负，后一秒速度特别大。为了过滤掉这种数值，取
+     * MAX_FLOW_SPEED = 313 MB/s > 312.5 MB/s == 2.5 GB/s.
+     */
+    uint64_t speed = cur->speed;
+    if (speed > 0 && speed < MAX_FLOW_SPEED) {
+        return speed;
+    } else {
+        return 0;
+    }
 }
 
 int
