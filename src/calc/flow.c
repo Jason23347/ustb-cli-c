@@ -2,12 +2,15 @@
 
 #include "flow.h"
 
+#include "terminal.h"
 #include "text.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #define FREE_FLOW_KB (FREE_FLOW_GB * GB)
+
+#define MILLION 1000000
 
 /**
  * Calculate weight for time interval,
@@ -24,52 +27,58 @@ flow_wight(uint64_t millisec) {
     }
 }
 
-uint64_t
-flow_speed(flow_t arr[FLOW_NUM], int current_flow) {
-    flow_t *cur, *flow, *last;
-    struct timeval *tv;
-    uint64_t millisec;
-    unsigned weight = 0;
-    double res = 0;
+static inline size_t
+prev_index(size_t idx) {
+    return (idx == 0) ? (FLOW_NUM - 1) : (idx - 1);
+}
 
-    /* 分支即优化 */
-    if (current_flow == 0) {
-        cur = arr + FLOW_NUM - 1;
-        last = arr + FLOW_NUM - 2;
-    } else if (current_flow == 1) {
-        cur = arr;
-        last = arr + FLOW_NUM - 1;
-    } else {
-        cur = arr + current_flow - 1;
-        last = cur - 1;
+uint64_t
+flow_speed(flow_history_t *history, uint64_t download) {
+    // 新元素位置
+    size_t cur_idx = (history->head + 1) % FLOW_NUM;
+    size_t last_idx = history->head;
+
+    flow_t *cur = &history->arr[cur_idx];
+    flow_t *last = &history->arr[last_idx];
+
+    // 填充当前时间和下载量
+    gettimeofday(&cur->tval, NULL);
+    cur->download = download;
+
+    // 更新环形缓冲索引
+    history->head = cur_idx;
+    if (cur_idx == history->tail) {
+        history->tail = (history->tail + 1) % FLOW_NUM; // 覆盖最老元素
     }
 
-    tv = &cur->tval;
+    // 计算速度
+    uint64_t micros = (cur->tval.tv_sec - last->tval.tv_sec) * MILLION +
+                      (cur->tval.tv_usec - last->tval.tv_usec);
+    if (micros == 0) {
+        micros = 1;
+    }
 
-    millisec = (tv->tv_sec - last->tval.tv_sec) * 1000000 +
-               (tv->tv_usec - last->tval.tv_usec);
-    cur->speed = (cur->download - last->download) * 1.0 / (millisec + 1);
+    cur->speed = (double)(cur->download - last->download) / micros;
 
-    // TODO 提供平滑选项
-    // for (flow = arr; flow - arr < FLOW_NUM; flow++) {
-    //     millisec = (tv->tv_sec - flow->tval.tv_sec) * 1000000 +
-    //                (tv->tv_usec - flow->tval.tv_usec);
-    //     unsigned w = flow_wight(millisec);
-    //     weight += w;
-    //     res += w * flow->speed;
-    // }
+    uint64_t tmp = round(uint64_t, cur->speed *MILLION);
+    return (tmp > 0 && tmp < 100 * MB) ? tmp : 0;
+}
 
-    /* FIXME 谜之bug，出现奇大无比的值 */
-    {
-        uint64_t tmp = round(uint64_t, cur->speed * 1000000.0);
-        return (tmp > 0 && tmp < 100 * MB) ? tmp : 0;
+int
+flow_speed_color(uint64_t speedKB) {
+    if (speedKB < 1 * MB) {
+        return GREEN;
+    } else if (speedKB < 6 * MB) {
+        return YELLOW;
+    } else {
+        return RED;
     }
 }
 
 void
 flow_format(uint64_t flowKB, char *buf, size_t size) {
-    if (flowKB <= 1.0 * KB) {
-        snprintf(buf, size, "<1 KB");
+    if (flowKB <= KB) {
+        snprintf(buf, size, "0 KB");
     } else if (flowKB < MB) {
         snprintf(buf, size, "%.2f KB", (double)flowKB / KB);
     } else if (flowKB < GB) {
@@ -84,7 +93,7 @@ flow_format(uint64_t flowKB, char *buf, size_t size) {
 uint64_t
 flow_left(uint64_t flowKB) {
     if (flowKB < FREE_FLOW_KB) {
-        return FREE_FLOW_KB - flowKB;
+        return (FREE_FLOW_KB - flowKB);
     } else {
         return 0;
     }
@@ -95,16 +104,18 @@ flow_over(uint64_t flowKB) {
     if (flowKB > FREE_FLOW_KB) {
         return 0;
     } else {
-        return flowKB - FREE_FLOW_KB;
+        return (flowKB - FREE_FLOW_KB);
     }
 }
 
 void
 flow_format_speed(uint64_t flowKB, char *str, size_t len) {
-    if (flowKB < 1000) {
+    if (flowKB <= 1 * KB) {
+        snprintf(str, len, "0 KB/s");
+    } else if (flowKB < 1000 * KB) {
         snprintf(str, len, uint64_spec " KB/s", flowKB);
     } else {
-        snprintf(str, len, "%.2lf MB/s", (double)flowKB / KB);
+        snprintf(str, len, "%.2lf MB/s", (double)flowKB / MB);
     }
 
     return;

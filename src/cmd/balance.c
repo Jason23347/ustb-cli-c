@@ -109,7 +109,7 @@ cmd_info(int argc, char **argv) {
 
 int
 cmd_fee(int argc, char **argv) {
-    int color;
+    int c;
     uint64_t curr_flow;
     uint64_t fee_num;
     char fee_str[16];
@@ -135,9 +135,9 @@ cmd_fee(int argc, char **argv) {
     uint64_t over = flow_over(curr_flow);
     if (over <= 0) {
         fee_format(fee_str, sizeof(fee_str), fee_cost(curr_flow));
-        color = cost_color(fee_str);
+        c = cost_color(fee_str);
         printf("Money Cost: ");
-        set_color(color);
+        set_color(c);
         printf("￥%.*s", (int)sizeof(fee_str), fee_str);
         reset_color();
         printf("\n");
@@ -150,9 +150,9 @@ cmd_fee(int argc, char **argv) {
     }
 
     fee_format(fee_str, sizeof(fee_str), fee_num);
-    color = balance_color(fee_str);
+    c = balance_color(fee_str);
     printf("Money Left: ");
-    set_color(color);
+    set_color(c);
     printf("￥%.*s", (int)sizeof(fee_str), fee_str);
     reset_color();
     printf("\n");

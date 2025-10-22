@@ -21,11 +21,14 @@ typedef struct {
 
 typedef struct {
     flow_t arr[FLOW_NUM];
+    size_t head;
+    size_t tail;
 } flow_history_t;
 
 uint64_t flow_left(uint64_t flowKB);
 uint64_t flow_over(uint64_t flowKB);
-uint64_t flow_speed(flow_t arr[FLOW_NUM], int current_flow);
+uint64_t flow_speed(flow_history_t *history, uint64_t flow);
+int flow_speed_color(uint64_t speedKB);
 void flow_format(uint64_t flowKB, char *buf, size_t size);
 void flow_format_speed(uint64_t flowKB, char *str, size_t len);
 
