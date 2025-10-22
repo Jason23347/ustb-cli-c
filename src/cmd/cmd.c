@@ -208,26 +208,45 @@ cmd_version(int argc, char **argv) {
     return 0;
 }
 
-static void
+static int
 global_config_parse(int argc, char **argv) {
+    int argc_remove = 0;
+    /* args to remove */
+    int arg_idx[argc];
+
     cag_option_context context;
     cag_option_init(&context, global_options, CAG_ARRAY_SIZE(global_options),
                     argc, argv);
+
     while (cag_option_fetch(&context)) {
-        switch (cag_option_get_identifier(&context)) {
+        int idx = cag_option_get_index(&context);
+        char id = cag_option_get_identifier(&context);
+
+        switch (id) {
 #ifdef WITH_COLOR
         case 'r':
             global_config.raw_output = 1;
+            arg_idx[argc_remove++] = idx;
             break;
-#endif /* WITH_COLOR */
+#endif
         case 'h':
             global_config.need_help = 1;
+            arg_idx[argc_remove++] = idx;
             break;
         case '?':
-            /* Let them go */
             break;
         }
     }
+
+    /* Remove solved global args */
+    for (int i = argc_remove; i > 0; i--) {
+        int idx = arg_idx[i - 1];
+        for (int j = idx; j < argc; j++) {
+            argv[j - 1] = argv[j];
+        }
+    }
+
+    return (argc - argc_remove);
 }
 
 int
@@ -238,7 +257,7 @@ cmd_parse(int argc, char **argv) {
     argc--;
     argv++;
 
-    global_config_parse(argc, argv);
+    argc = global_config_parse(argc, argv);
 
     for (size_t i = 0; i < command_count; i++) {
         if (strcmp(command, commands[i].name) == 0) {
