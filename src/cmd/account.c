@@ -320,7 +320,7 @@ cmd_whoami(int argc, char **argv) {
     }
 
     char username[MAX_VAR_LEN];
-    res = extract(username, http->buff, "%s", "uid", 1);
+    res = extract(username, http->buff, "%[^']s", "uid", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }
