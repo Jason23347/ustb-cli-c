@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_VAR_LEN 40
+
 typedef struct info {
     uint64_t curr_flow;
     uint64_t curr_flow_v6;
@@ -28,6 +30,8 @@ info_has_ipv6(const info_t *info) {
 
 int
 info_fetch(info_t *info) {
+    int res;
+
     http_t http[1] = {{
         .domain = LOGIN_HOST,
         .port = LOGIN_PORT,
@@ -42,10 +46,29 @@ info_fetch(info_t *info) {
         return -1;
     }
 
-    extract(&info->curr_flow, p, uint64_spec, "flow", 1);
-    extract(&info->curr_flow_v6, p, uint64_spec, "v6df", 0);
-    extract(&info->ipv6_mode, p, "%u", "v46m", 0);
-    extract(&info->fee, p, "%u", "fee", 1);
+    if (strstr(p, "uid=") == NULL) {
+        set_color(YELLOW);
+        printf("Login required.\n");
+        reset_color();
+        return -1;
+    }
+
+    res = extract(&info->curr_flow, p, uint64_spec, "flow", 1);
+    if (res < 0) {
+        return -1;
+    }
+    res = extract(&info->curr_flow_v6, p, uint64_spec, "v6df", 0);
+    if (res < 0) {
+        return -1;
+    }
+    res = extract(&info->ipv6_mode, p, "%u", "v46m", 0);
+    if (res < 0) {
+        return -1;
+    }
+    res = extract(&info->fee, p, "%u", "fee", 1);
+    if (res < 0) {
+        return -1;
+    }
 
     /* FIXME: Don't know why */
     info->curr_flow_v6 /= 4;
@@ -99,9 +122,14 @@ info_print(const info_t *info) {
 
 int
 cmd_info(int argc, char **argv) {
+    int res;
     info_t info[1] = {0};
 
-    info_fetch(info);
+    res = info_fetch(info);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
+
     info_print(info);
 
     return EXIT_SUCCESS;
