@@ -143,10 +143,12 @@ http_get(http_t *http, const gstr_t *path) {
     const char *slen = http_header(http, sizeof(buf), "content-length:");
     if (slen == NULL) {
         /**
-         * 如果没设置content-length，直接返回当前body字符串。
-         * 虽然有的\r被替换成0，但是目前只需兼容cippv6，不影响。
+         * 如果没设置content-length，再读一行直接返回。
+         * 只需兼容 cippv6.ustb.edu.cn/get_ip.php
          */
-        len = strlen(buf);
+        /* 不知为何这里有一行"3a"，何意味啊 */
+        http_readline(http, sizeof(buf));
+        len = http_readline(http, sizeof(buf));
         http->buff = malloc(len);
         if (http->buff == NULL) {
             return -1;

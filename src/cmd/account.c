@@ -196,19 +196,8 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
         return -1;
     } else {
         // Extract ipv6_addr between single-quotes
-        char *start = strchr(http->buff, '\'');
-        if (!start) {
-            return -1;
-        }
-        char *end = strchr(start + 1, '\'');
-        if (!end || end == start + 1) {
-            return -1;
-        }
-        size_t len = end - (start + 1);
-        if (len > maxlen) {
-            len = maxlen;
-        }
-        strncpy(ipv6_addr, start + 1, len);
+        const char *p = strchr(http->buff, '\'');
+        sscanf(p + 1, "%39[^']s", ipv6_addr);
     }
 
     return 0;
