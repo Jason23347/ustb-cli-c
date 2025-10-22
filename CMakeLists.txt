@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(ustb-cli VERSION 1.0)
+project(ustb-cli VERSION 1.0.0)
 
 #---------------------------------------
 # Build types
