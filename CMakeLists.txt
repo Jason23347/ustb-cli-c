@@ -10,8 +10,8 @@ endif()
 
 set(CMAKE_C_FLAGS "-Wall -Wno-unused-variable")
 set(CMAKE_C_FLAGS_DEBUG "-g -O0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -s -w -flto")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2")
+set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O3 -s -w -flto")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-DNDEBUG -g -O2")
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in

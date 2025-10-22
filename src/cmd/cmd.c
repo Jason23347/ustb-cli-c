@@ -148,11 +148,23 @@ print_default_help(int argc, char **argv) {
 
 int
 cmd_version(int argc, char **argv) {
-    printf("%s %sv%s%s ", PACKAGE_NAME, color(YELLOW), PACKAGE_VERSION,
-           color(NORMAL));
+    printf("%s ", PACKAGE_NAME);
+    printf("v%s ", PACKAGE_VERSION);
     printf(
+#if defined(NDEBUG) && !defined(WITH_COLOR)
+    /* Nothing */
+#else
+        "("
 #ifndef NDEBUG
-        "(debug) "
+        "debug"
+#endif
+#if !defined(NDEBUG) && defined(WITH_COLOR)
+        " "
+#endif
+#ifdef WITH_COLOR
+        color(YELLOW) "color" color(NORMAL)
+#endif
+            ") "
 #endif
 
 #ifdef WITH_ACCOUNT
@@ -161,10 +173,6 @@ cmd_version(int argc, char **argv) {
 
 #ifdef WITH_BALANCE
         "+balance"
-#endif
-
-#ifdef WITH_COLOR
-        "+color"
 #endif
 
         "\n\n"
