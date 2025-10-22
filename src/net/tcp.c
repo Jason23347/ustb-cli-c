@@ -28,7 +28,7 @@ domain2addr(char *addr_str, const char *domain, size_t maxlen, int ipv6_only) {
 
     if (res->ai_family == AF_INET) {
         struct sockaddr_in *addr = (struct sockaddr_in *)res->ai_addr;
-        strncpy(addr_str, inet_ntoa(addr->sin_addr), maxlen);
+        snprintf(addr_str, maxlen, "%s", inet_ntoa(addr->sin_addr));
     } else if (res->ai_family == AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)res->ai_addr;
         inet_ntop(AF_INET6, &addr6->sin6_addr, addr_str, maxlen);
@@ -59,7 +59,7 @@ int
 tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ipv6_only) {
     int sock_fd = INVALID_SOCKET;
     const char *ip;
-    char ip_buf[39];
+    char ip_buf[40];
     int is_ipv6;
 
     if (is_ipv4_address(domain)) {

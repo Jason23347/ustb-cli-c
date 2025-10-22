@@ -14,8 +14,8 @@
 typedef struct info {
     uint64_t curr_flow;
     uint64_t curr_flow_v6;
-    char ipv4_addr[15];
-    char ipv6_addr[39];
+    char ipv4_addr[16];
+    char ipv6_addr[40];
     int ipv6_mode;
     unsigned fee;
 } info_t;

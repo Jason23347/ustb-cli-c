@@ -65,13 +65,14 @@ login_load_env(const char *env_filepath, char *username, char *password,
     while (fgets(line, sizeof(line), fp)) {
         // get USERNAME=xxx and PASSWORD=xxx
         if (0 == strncmp(line, USTB_USERNAME_VAR "=", USTB_USERNAME_LEN)) {
-            strncpy(username, line + USTB_USERNAME_LEN, maxlen);
-            // Remove trailing newline if present
-            username[strcspn(username, "\r\n")] = 0;
+            snprintf(username, maxlen, "%.*s", (int)(maxlen - 1),
+                     line + USTB_USERNAME_LEN);
+            username[strcspn(username, "\r\n")] = '\0';
         } else if (0 ==
                    strncmp(line, USTB_PASSWORD_VAR "=", USTB_PASSWORD_LEN)) {
-            strncpy(password, line + USTB_USERNAME_LEN, maxlen);
-            password[strcspn(password, "\r\n")] = 0;
+            snprintf(password, maxlen, "%.*s", (int)(maxlen - 1),
+                     line + USTB_USERNAME_LEN);
+            password[strcspn(password, "\r\n")] = '\0';
         }
     }
     fclose(fp);
@@ -99,8 +100,8 @@ ipv6_urlencode(char *dest, const char *ipv6_addr, size_t maxlen) {
 
 static int
 login_url_path(const login_t *config, gstr_t *str) {
-    char username[MAX_VAR_LEN] = {0};
-    char password[MAX_VAR_LEN] = {0};
+    char username[MAX_VAR_LEN] = "";
+    char password[MAX_VAR_LEN] = "";
 
     // Get username & password
     int res =
@@ -237,8 +238,8 @@ login_request(const gstr_t *path) {
 int
 cmd_login(int argc, char **argv) {
     int res;
-    char ipv6_buf[39];
-    char filepath_buf[MAX_PATH_LEN] = "";
+    char ipv6_buf[40];
+    char filepath_buf[MAX_PATH_LEN];
     login_t config[1] = {0};
 
     // Get username & password & other things

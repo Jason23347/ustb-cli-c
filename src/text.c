@@ -42,7 +42,7 @@ assign_decimal(char *str, size_t maxlen, int64_t number, size_t n) {
     len = strlen(s);
     // 小数点后两位向右平移
     s += len - n;
-    strncpy(s + 1, s, 2);
+    memmove(s + 1, s, 2);
     s[0] = '.';
     s[3] = '\0';
 }
