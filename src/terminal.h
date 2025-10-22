@@ -30,8 +30,8 @@
 
 #define color(code) "\033[" STR(code) "m"
 
-#define set_color(c)  printf(color(%d), c)
-#define reset_color() printf(color(NORMAL;NORMAL))
+#define set_color(c)  (global_config.raw_output == 0) ? printf(color(%d), c) : ((void)0)
+#define reset_color() (global_config.raw_output == 0) ? printf(color(NORMAL;NORMAL)) : ((void)0)
 
 #else /* WITH_COLOR */
 

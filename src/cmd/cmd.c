@@ -107,7 +107,7 @@ const struct cag_option global_options[] = {
 struct globconf global_config = {
     .need_help = 0,
 #ifdef WITH_COLOR
-    .raw_output = 1,
+    .raw_output = 0,
 #endif
 };
 
@@ -150,23 +150,26 @@ int
 cmd_version(int argc, char **argv) {
     printf("%s ", PACKAGE_NAME);
     printf("v%s ", PACKAGE_VERSION);
-    printf(
+
 #if defined(NDEBUG) && !defined(WITH_COLOR)
     /* Nothing */
 #else
-        "("
+    printf("(");
 #ifndef NDEBUG
-        "debug"
+    printf("debug");
 #endif
 #if !defined(NDEBUG) && defined(WITH_COLOR)
-        " "
+    printf(" ");
 #endif
 #ifdef WITH_COLOR
-        color(YELLOW) "color" color(NORMAL)
+    set_color(YELLOW);
+    printf("color");
+    reset_color();
 #endif
-            ") "
+    printf(") ");
 #endif
 
+    printf(
 #ifdef WITH_ACCOUNT
         "+account"
 #endif
@@ -210,17 +213,7 @@ global_config_parse(int argc, char **argv) {
         switch (cag_option_get_identifier(&context)) {
 #ifdef WITH_COLOR
         case 'r':
-            const char *value = cag_option_get_value(&context);
-            if (value == NULL || strlen(value) == 0) {
-                /* Keep as default */
-            } else {
-                const char zero[] = "0";
-                if (strncmp(value, zero, sizeof(zero)) != 0) {
-                    global_config.raw_output = 1;
-                } else {
-                    global_config.raw_output = 0;
-                }
-            }
+            global_config.raw_output = 1;
             break;
 #endif /* WITH_COLOR */
         case 'h':

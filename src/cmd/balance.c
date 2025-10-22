@@ -63,7 +63,10 @@ info_print(const info_t *info) {
     flow_format(info->curr_flow, flow_str, sizeof(flow_str));
     flow_format(info->curr_flow_v6, flow_v6_str, sizeof(flow_v6_str));
 
-    printf(color(BLUE) "IPV4" color(NORMAL) "\n");
+    set_color(BLUE);
+    printf("IPV4");
+    reset_color();
+    printf("\n");
     printf("IP Address:\t%.*s\n", (int)sizeof(info->ipv4_addr),
            info->ipv4_addr);
     printf("Flow used:\t%s\n", flow_str);
@@ -76,7 +79,10 @@ info_print(const info_t *info) {
     if (!info_has_ipv6(info)) {
         printf("IPV6 disabled\n");
     } else {
-        printf(color(GREEN) "IPV6" color(NORMAL) "\n");
+        set_color(GREEN);
+        printf("IPV6");
+        reset_color();
+        printf("\n");
         printf("IP Address:\t%.*s\n", (int)sizeof(info->ipv6_addr),
                info->ipv6_addr);
         printf("Flow used:\t%s\n", flow_v6_str);
@@ -133,10 +139,14 @@ cmd_fee(int argc, char **argv) {
         printf("Money Cost: ");
         set_color(color);
         printf("￥%.*s", (int)sizeof(fee_str), fee_str);
-        set_color(NORMAL);
+        reset_color();
         printf("\n");
     } else {
-        printf("Money Cost: " color(GREEN) "￥0" color(NORMAL) "\n");
+        printf("Money Cost: ");
+        set_color(GREEN);
+        printf("￥0");
+        reset_color();
+        printf("\n");
     }
 
     fee_format(fee_str, sizeof(fee_str), fee_num);
@@ -144,7 +154,7 @@ cmd_fee(int argc, char **argv) {
     printf("Money Left: ");
     set_color(color);
     printf("￥%.*s", (int)sizeof(fee_str), fee_str);
-    set_color(NORMAL);
+    reset_color();
     printf("\n");
 
     printf("\n");
