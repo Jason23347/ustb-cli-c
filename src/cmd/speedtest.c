@@ -29,6 +29,8 @@ http_get_flow(http_t *http, uint64_t *flow) {
 
     extract(flow, http->buff, uint64_spec, "flow", 1);
 
+    http_free(http);
+
     return 0;
 }
 

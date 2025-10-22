@@ -8,7 +8,7 @@
 #define MAX_BUFF_SIZE 4096
 
 typedef struct {
-    char buff[MAX_BUFF_SIZE];
+    char *buff;
     char domain[20]; // longest: "cippv6.ustb.edu.cn"
     tcp_t conn;
     uint16_t port;
@@ -16,6 +16,7 @@ typedef struct {
 } http_t;
 
 int http_get(http_t *http, const gstr_t *path);
+void http_free(http_t *http);
 
 static inline int
 http_get_root(http_t *http) {
