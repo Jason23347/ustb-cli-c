@@ -17,6 +17,12 @@
 #define MAX_PATH_LEN            200
 #define URLENCODED_IPV6_MAX_LEN (40 + 7 * 2)
 
+typedef struct login {
+    int use_ipv6;
+    const char *ipv6_addr;
+    const char *env_filepath;
+} login_t;
+
 static struct cag_option login_options[] = {
     {
         .identifier = 'c',
@@ -39,12 +45,6 @@ print_login_help(int argc, char **argv) {
     return print_command_help(argc, argv, login_options,
                               CAG_ARRAY_SIZE(login_options));
 }
-
-typedef struct login {
-    int use_ipv6;
-    const char *ipv6_addr;
-    const char *env_filepath;
-} login_t;
 
 static int
 login_load_env(const char *env_filepath, char *username, char *password,
@@ -167,7 +167,7 @@ login_get_config(login_t *config, int argc, char **argv) {
             break;
         case 'i':
             value = cag_option_get_value(&context);
-            if (value) {
+            if (value != NULL && strlen(value) != 0) {
                 const char str_true[] = "true";
                 int cmp = strncmp(value, str_true, sizeof(str_true));
                 config->use_ipv6 = (cmp == 0);
