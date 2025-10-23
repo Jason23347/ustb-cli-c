@@ -185,10 +185,7 @@ login_get_config(login_t *config, int argc, char **argv) {
 
 static int
 ipv6_get(char *ipv6_addr, size_t maxlen) {
-    http_t http[1] = {{
-        .domain = CIPPV6_DOMAIN,
-        .port = CIPPV6_PORT,
-    }};
+    http_t *http = http_init(CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
 
     int res = http_get(http, &gstr_from_const(CIPPV6_PATH));
     if (res != 0) {
@@ -196,7 +193,8 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
         return -1;
     } else {
         // Extract ipv6_addr between single-quotes
-        const char *p = strchr(http->buff, '\'');
+        const char *content = http_body(http);
+        const char *p = strchr(content, '\'');
         sscanf(p + 1, "%39[^']s", ipv6_addr);
     }
 
@@ -205,21 +203,19 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
 
 static int
 login_request(const gstr_t *path) {
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
     int res = http_get(http, path);
     if (res != 0) {
         return -1;
     }
 
-    if (strstr(http->buff, "\"result\":1") == NULL) {
+    const char *content = http_body(http);
+    if (strstr(content, "\"result\":1") == NULL) {
         return -1;
     }
 
-    debug("%s\n", http->buff);
+    debug("%s\n", content);
 
     return 0;
 }
@@ -281,10 +277,7 @@ cmd_login(int argc, char **argv) {
 
 int
 cmd_logout(int argc, char **argv) {
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
     int res = http_get(http, &gstr_from_const("/F.htm"));
     if (res != 0) {
@@ -298,18 +291,16 @@ int
 cmd_whoami(int argc, char **argv) {
     int res;
 
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
     res = http_get_root(http);
     if (res == -1) {
         return EXIT_FAILURE;
     }
 
+    const char *content = http_body(http);
     char username[MAX_VAR_LEN];
-    res = extract(username, http->buff, "%[^']s", "uid", 1);
+    res = extract(username, content, "%[^']s", "uid", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }

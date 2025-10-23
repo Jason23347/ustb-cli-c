@@ -10,11 +10,19 @@
 #include <unistd.h>
 
 static int
-domain2addr(char *addr_str, const char *domain, size_t maxlen, int ipv6_only) {
+domain2addr(char *addr_str, const char *domain, size_t maxlen, int ip_mode) {
     int ret;
+
+    int af;
     struct addrinfo *res;
 
-    int af = ipv6_only ? AF_INET6 : AF_UNSPEC;
+    if (ip_mode == IPV4_ONLY) {
+        af = AF_INET;
+    } else if (ip_mode == IPV6_ONLY) {
+        af = AF_INET6;
+    } else {
+        af = AF_UNSPEC;
+    }
 
     struct addrinfo hints = {
         .ai_family = af,
@@ -56,7 +64,7 @@ is_ipv6_address(const char *s) {
 
 /* Get a TCP connection */
 int
-tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ipv6_only) {
+tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
     int sock_fd = INVALID_SOCKET;
     const char *ip;
     char ip_buf[40];
@@ -69,7 +77,7 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ipv6_only) {
         ip = domain;
         is_ipv6 = 1;
     } else {
-        domain2addr(ip_buf, domain, sizeof(ip_buf), ipv6_only);
+        domain2addr(ip_buf, domain, sizeof(ip_buf), ip_mode);
         ip = ip_buf;
         is_ipv6 = is_ipv6_address(ip);
     }

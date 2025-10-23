@@ -14,6 +14,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define MAX_BUF_SIZE 4096
+
 typedef struct speedtest {
     int test_upload;
     int test_download;
@@ -108,11 +110,7 @@ speedtest_download(const speedtest_t *config) {
     char buf[MAX_BUF_SIZE];
     struct timeval start, end;
 
-    http_t http[1] = {{
-        .domain = SPEEDTEST_DOMAIN,
-        .port = SPEEDTEST_PORT,
-        .buff = buf,
-    }};
+    http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
 
     gstr_t str[1] = {gstr_from_buf(buf)};
     r = random_d();
@@ -159,11 +157,7 @@ speedtest_upload(const speedtest_t *config) {
     char buf[MAX_BUF_SIZE];
     struct timeval start, end;
 
-    http_t http[1] = {{
-        .domain = SPEEDTEST_DOMAIN,
-        .port = SPEEDTEST_PORT,
-        .buff = buf,
-    }};
+    http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
 
     gstr_t str[1] = {gstr_from_buf(buf)};
     r = random_d();
@@ -174,11 +168,12 @@ speedtest_upload(const speedtest_t *config) {
     total = config->filesizeMB * ((1024 * 1024) / sizeof(buf));
     seed = rand();
 
+    fill_random_with_seed((uint8_t *)buf, sizeof(buf), &seed);
+
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
     for (int i = 0; i < total; i++) {
-        fill_random_with_seed((uint8_t *)buf, sizeof(buf), &seed);
-        tcp_write(&http->conn, buf, sizeof(buf));
+        http_write(http, buf, sizeof(buf));
     }
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&end, NULL);
@@ -253,9 +248,8 @@ http_get_flow(http_t *http, uint64_t *flow) {
         return -1;
     }
 
-    extract(flow, http->buff, uint64_spec, "flow", 1);
-
-    http_free(http);
+    const char *content = http_body(http);
+    extract(flow, content, uint64_spec, "flow", 1);
 
     return 0;
 }
@@ -266,13 +260,11 @@ cmd_monitor(int argc, char **argv) {
     char flow_str[20];
     uint64_t download, speed;
     flow_history_t history[1] = {0};
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
 
     for (; 1; sleep_till_next_sec()) {
+        http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
         res = http_get_flow(http, &download);
+        http_free(http);
         if (res != 0) {
             set_color(RED);
             printf("ERROR");

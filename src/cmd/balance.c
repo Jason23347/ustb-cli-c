@@ -32,16 +32,14 @@ int
 info_fetch(info_t *info) {
     int res;
 
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
     if (http_get_root(http) == -1) {
         return -1;
     }
 
-    const char *p = strstr(http->buff, "<script");
+    const char *content = http_body(http);
+    const char *p = strstr(content, "<script");
     if (p == NULL) {
         return -1;
     }
@@ -142,18 +140,16 @@ cmd_fee(int argc, char **argv) {
     uint64_t fee_num;
     char fee_str[16];
 
-    http_t http[1] = {{
-        .domain = LOGIN_HOST,
-        .port = LOGIN_PORT,
-    }};
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
     if (http_get_root(http) == -1) {
         return EXIT_FAILURE;
     }
 
-    const char *p = strstr(http->buff, "<script");
+    const char *content = http_body(http);
+    const char *p = strstr(content, "<script");
     if (p == NULL) {
-        debug("failed to get variables: %s\n", http->buff);
+        debug("failed to get variables: %s\n", content);
         return EXIT_FAILURE;
     }
 

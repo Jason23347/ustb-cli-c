@@ -7,10 +7,46 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_BUF_SIZE 4096
+
+typedef struct http {
+    const char *domain;
+    tcp_t conn;
+    char *buff;
+    int ip_mode;
+    uint16_t port;
+} http_t;
+
+http_t *
+http_init(const char *domain, uint16_t port, int ip_mode) {
+    http_t *http = malloc(sizeof(http_t));
+    *http = (http_t){
+        .domain = domain,
+        .port = port,
+        .buff = NULL,
+        .ip_mode = ip_mode,
+        .conn =
+            {
+                .fd = INVALID_SOCKET,
+            },
+    };
+
+    return http;
+}
+
+void
+http_free(http_t *http) {
+    if (http->buff != NULL) {
+        free(http->buff);
+        http->buff = NULL;
+    }
+
+    free(http);
+}
+
 int
 http_connect(http_t *http) {
-    int res =
-        tcp_connect(&http->conn, http->domain, http->port, http->ipv6_only);
+    int res = tcp_connect(&http->conn, http->domain, http->port, http->ip_mode);
     if (res != 0) {
         return -1;
     }
@@ -22,7 +58,7 @@ int
 http_request(const http_t *http, const gstr_t *path) {
     /* Host请求头是增加幸福感的关键，不能删掉 */
     const char method[] = "GET";
-    size_t req_len = path->len + 24 + sizeof(method) + sizeof(http->domain);
+    size_t req_len = path->len + 24 + sizeof(method) + strlen(http->domain);
     char req[req_len];
     snprintf(req, req_len,
              "GET %s HTTP/1.1\r\n"
@@ -30,7 +66,7 @@ http_request(const http_t *http, const gstr_t *path) {
              "\r\n",
              path->s, http->domain);
 
-    if (tcp_write(&http->conn, req, strlen(req)) == -1) {
+    if (http_write(http, req, strlen(req)) == -1) {
         return -1;
     }
 
@@ -76,9 +112,19 @@ http_read(http_t *http, size_t len) {
     return tcp_read(&http->conn, http->buff, len);
 }
 
+size_t
+http_write(const http_t *http, void *buf, size_t len) {
+    return tcp_write(&http->conn, buf, len);
+}
+
 void
 http_close(const http_t *http) {
     tcp_close(&http->conn);
+}
+
+const char *
+http_body(const http_t *http) {
+    return http->buff;
 }
 
 const char *
@@ -174,12 +220,4 @@ http_get(http_t *http, const gstr_t *path) {
     http_close(http);
 
     return 0;
-}
-
-void
-http_free(http_t *http) {
-    free(http->buff);
-#ifndef NDEBUG
-    http->buff = NULL;
-#endif
 }
