@@ -121,14 +121,14 @@ speedtest_download(const speedtest_t *config) {
 
     http_connect(http);
     http_request(http, str);
-    http_skip_section(http, sizeof(buf));
+    http_skip_section(http, buf, sizeof(buf));
 
     total = config->filesizeMB * ((1024 * 1024) / sizeof(buf));
 
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
     for (int i = 0; i < total; i++) {
-        http_read(http, sizeof(buf));
+        http_read(http, buf, sizeof(buf));
     }
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&end, NULL);
@@ -245,13 +245,14 @@ http_get_flow(http_t *http, uint64_t *flow) {
 
     int res;
 
-    res = http_get_root(http);
-    if (res != 0) {
+    char *content = http_get_root(http);
+    if (content == NULL) {
         return -1;
     }
 
-    const char *content = http_body(http);
     extract(flow, content, uint64_spec, "flow", 1);
+
+    free(content);
 
     return 0;
 }

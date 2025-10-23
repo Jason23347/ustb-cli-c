@@ -12,7 +12,6 @@
 typedef struct http {
     const char *domain;
     tcp_t conn;
-    char *buff;
     int ip_mode;
     uint16_t port;
 } http_t;
@@ -23,7 +22,6 @@ http_init(const char *domain, uint16_t port, int ip_mode) {
     *http = (http_t){
         .domain = domain,
         .port = port,
-        .buff = NULL,
         .ip_mode = ip_mode,
         .conn =
             {
@@ -36,11 +34,6 @@ http_init(const char *domain, uint16_t port, int ip_mode) {
 
 void
 http_free(http_t *http) {
-    if (http->buff != NULL) {
-        free(http->buff);
-        http->buff = NULL;
-    }
-
     free(http);
 }
 
@@ -74,8 +67,7 @@ http_request(const http_t *http, const gstr_t *path) {
 }
 
 size_t
-http_readline(const http_t *http, size_t maxlen) {
-    char *buf = http->buff;
+http_readline(const http_t *http, char *buf, size_t maxlen) {
     char c;
     char *p;
     int flag = 0;
@@ -108,8 +100,8 @@ http_readline(const http_t *http, size_t maxlen) {
 }
 
 size_t
-http_read(http_t *http, size_t len) {
-    return tcp_read(&http->conn, http->buff, len);
+http_read(http_t *http, void *buf, size_t len) {
+    return tcp_read(&http->conn, buf, len);
 }
 
 size_t
@@ -123,21 +115,15 @@ http_close(const http_t *http) {
 }
 
 const char *
-http_body(const http_t *http) {
-    return http->buff;
-}
-
-const char *
-http_header(const http_t *http, size_t maxlen, const char *header) {
+http_header(const http_t *http, char *buf, const char *header, size_t maxlen) {
     assert(header != NULL);
 
     size_t len;
     size_t used = 0;
     char *match = NULL;
-    char *buf = http->buff;
 
     while (1) {
-        len = http_readline(http, maxlen - used);
+        len = http_readline(http, buf, maxlen - used);
         if (len <= 0) { // empty line
             break;
         }
@@ -155,10 +141,10 @@ http_header(const http_t *http, size_t maxlen, const char *header) {
 }
 
 void
-http_skip_section(const http_t *http, size_t maxlen) {
+http_skip_section(const http_t *http, char *buf, size_t maxlen) {
     size_t used = 0;
     while (1) {
-        size_t len = http_readline(http, maxlen - used);
+        size_t len = http_readline(http, buf, maxlen - used);
         if (len == 0) {
             break;
         }
@@ -166,58 +152,58 @@ http_skip_section(const http_t *http, size_t maxlen) {
     }
 }
 
-int
+char *
 http_get(http_t *http, const gstr_t *path) {
     assert(path->s[0] == '/');
-    assert(http->buff == NULL);
 
+    char *body = NULL;
+
+    char buf[MAX_BUF_SIZE];
     size_t len;
 
     int res = http_connect(http);
     if (res != 0) {
-        return -1;
+        return NULL;
     }
 
     res = http_request(http, path);
     if (res != 0) {
-        return -1;
+        return NULL;
     }
 
     /* 取content-length */
-    char buf[MAX_BUF_SIZE];
-    http->buff = buf;
-    const char *slen = http_header(http, sizeof(buf), "content-length:");
+    const char *slen = http_header(http, buf, "content-length:", sizeof(buf));
     if (slen == NULL) {
         /**
          * 如果没设置content-length，再读一行直接返回。
          * 只需兼容 cippv6.ustb.edu.cn/get_ip.php
          */
         /* 这里有一行"3a"，是十六进制content-length */
-        len = http_readline(http, sizeof(buf));
+        len = http_readline(http, buf, sizeof(buf));
         if (len <= 0) {
             http_close(http);
-            return -1;
+            return NULL;
         }
-        sscanf(http->buff, "%lx", &len);
-        http->buff = malloc(len);
-        http_read(http, len);
-        if (http->buff == NULL) {
-            return -1;
+        sscanf(buf, "%lx", &len);
+        body = calloc(len + 1, 1);
+        if (body == NULL) {
+            return NULL;
         }
+        http_read(http, body, len);
     } else {
         /* 如果设置了content-length，再读一些字节 */
         len = atol(slen);
         /* 但是首先要把header过掉 */
-        http_skip_section(http, sizeof(buf));
+        http_skip_section(http, buf, sizeof(buf));
 
-        http->buff = malloc(len);
-        if (http->buff == NULL) {
-            return -1;
+        body = calloc(len + 1, 1);
+        if (body == NULL) {
+            return NULL;
         }
-        http_read(http, len);
+        http_read(http, body, len);
     }
 
     http_close(http);
 
-    return 0;
+    return body;
 }

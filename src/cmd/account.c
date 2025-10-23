@@ -188,16 +188,15 @@ static int
 ipv6_get(char *ipv6_addr, size_t maxlen) {
     http_t *http = http_init(CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
 
-    int res = http_get(http, &gstr_from_const(CIPPV6_PATH));
-    if (res != 0) {
+    const char *content = http_get(http, &gstr_from_const(CIPPV6_PATH));
+    if (content == NULL) {
         // failed to get ipv6
         return -1;
-    } else {
-        // Extract ipv6_addr between single-quotes
-        const char *content = http_body(http);
-        const char *p = strchr(content, '\'');
-        sscanf(p + 1, "%39[^']s", ipv6_addr);
     }
+
+    // Extract ipv6_addr between single-quotes
+    const char *p = strchr(content, '\'');
+    sscanf(p + 1, "%39[^']s", ipv6_addr);
 
     return 0;
 }
@@ -206,12 +205,11 @@ static int
 login_request(const gstr_t *path) {
     http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
-    int res = http_get(http, path);
-    if (res != 0) {
+    const char *content = http_get(http, path);
+    if (content == NULL) {
         return -1;
     }
 
-    const char *content = http_body(http);
     if (strstr(content, "\"result\":1") == NULL) {
         return -1;
     }
@@ -280,8 +278,8 @@ int
 cmd_logout(int argc, char **argv) {
     http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
-    int res = http_get(http, &gstr_from_const("/F.htm"));
-    if (res != 0) {
+    const char *content = http_get(http, &gstr_from_const("/F.htm"));
+    if (content == NULL) {
         return EXIT_FAILURE;
     }
 
@@ -294,12 +292,11 @@ cmd_whoami(int argc, char **argv) {
 
     http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
-    res = http_get_root(http);
-    if (res == -1) {
+    const char *content = http_get_root(http);
+    if (content == NULL) {
         return EXIT_FAILURE;
     }
 
-    const char *content = http_body(http);
     char username[MAX_VAR_LEN];
     res = extract(username, content, "%[^']s", "uid", 1);
     if (res < 0) {
