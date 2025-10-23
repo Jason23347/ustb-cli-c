@@ -59,7 +59,8 @@ http_request(const http_t *http, const gstr_t *path) {
              "\r\n",
              path->s, http->domain);
 
-    if (http_write(http, req, strlen(req)) == -1) {
+    size_t len = strlen(req);
+    if (http_write(http, req, len) != len) {
         return -1;
     }
 
@@ -71,7 +72,7 @@ http_readline(const http_t *http, char *buf, size_t maxlen) {
     char c;
     char *p;
     int flag = 0;
-    for (p = buf; tcp_read(&http->conn, &c, sizeof(c)) > 0; p++) {
+    for (p = buf; http_read(http, &c, sizeof(c)) > 0; p++) {
         if (p - buf < maxlen) {
             if (c >= 'A' && c <= 'Z') {
                 c += 0x20;
@@ -99,12 +100,12 @@ http_readline(const http_t *http, char *buf, size_t maxlen) {
     return p - buf;
 }
 
-size_t
-http_read(http_t *http, void *buf, size_t len) {
+ssize_t
+http_read(const http_t *http, void *buf, size_t len) {
     return tcp_read(&http->conn, buf, len);
 }
 
-size_t
+ssize_t
 http_write(const http_t *http, void *buf, size_t len) {
     return tcp_write(&http->conn, buf, len);
 }

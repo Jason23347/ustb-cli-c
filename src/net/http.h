@@ -20,8 +20,8 @@ const char *http_header(const http_t *http, char *buf, const char *header,
                         size_t maxlen);
 size_t http_readline(const http_t *http, char *buf, size_t maxlen);
 void http_skip_section(const http_t *http, char *buf, size_t maxlen);
-size_t http_write(const http_t *http, void *buf, size_t len);
-size_t http_read(http_t *http, void *buf, size_t len);
+ssize_t http_write(const http_t *http, void *buf, size_t len);
+ssize_t http_read(const http_t *http, void *buf, size_t len);
 void http_close(const http_t *http);
 
 static inline char *

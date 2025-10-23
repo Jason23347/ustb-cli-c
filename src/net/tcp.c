@@ -93,12 +93,12 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
     return 0;
 }
 
-size_t
+ssize_t
 tcp_read(const tcp_t *tcp, void *buffer, size_t size) {
     return read(tcp->fd, buffer, size);
 }
 
-size_t
+ssize_t
 tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
     return write(tcp->fd, buffer, size);
 }
