@@ -23,7 +23,7 @@ typedef struct login {
     const char *env_filepath;
 } login_t;
 
-static struct cag_option login_options[] = {
+const struct cag_option login_options[] = {
     {
         .identifier = 'c',
         .access_letters = "c",
@@ -39,6 +39,7 @@ static struct cag_option login_options[] = {
         .description = "Enable IPV6 or not, default true",
     },
 };
+const size_t login_opt_count = sizeof(login_options) / sizeof(login_options[0]);
 
 int
 print_login_help(int argc, char **argv) {

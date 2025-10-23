@@ -23,7 +23,7 @@ typedef struct speedtest {
     size_t filesizeMB;
 } speedtest_t;
 
-struct cag_option speedtest_options[] = {
+const struct cag_option speedtest_options[] = {
     {
         .identifier = 'c',
         .access_letters = "cs",
@@ -61,6 +61,8 @@ struct cag_option speedtest_options[] = {
         .description = "Show speed in Mbps",
     },
 };
+const size_t speedtest_opt_count =
+    sizeof(speedtest_options) / sizeof(speedtest_options[0]);
 
 int
 print_speedtest_help(int argc, char **argv) {

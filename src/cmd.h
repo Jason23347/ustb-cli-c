@@ -25,6 +25,7 @@ extern struct globconf {
 
 int cmd_parse(int argc, char **argv);
 // default
+int cmd_completion(int argc, char **argv);
 int cmd_help(int argc, char **argv);
 int cmd_version(int argc, char **argv);
 // balance

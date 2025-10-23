@@ -9,3 +9,4 @@
 #cmakedefine WITH_ACCOUNT 1
 #cmakedefine WITH_BALANCE 1
 #cmakedefine WITH_SPEEDTEST 1
+#cmakedefine WITH_COMPLETION 1

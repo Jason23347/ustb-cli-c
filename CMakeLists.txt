@@ -24,7 +24,8 @@ configure_file(
 option(WITH_COLOR "Enable colorful output" OFF)
 option(WITH_ACCOUNT "Enable account features: login, logout, whoami" ON)
 option(WITH_BALANCE "Enable balance features: info, fee" OFF)
-option(WITH_SPEEDTEST "Enable balance features: info, fee" OFF)
+option(WITH_SPEEDTEST "Enable speedtest features: speedtest, monitor" OFF)
+option(WITH_COMPLETION "Enable completion features: completion" OFF)
 
 #---------------------------------------
 # Compiler settings

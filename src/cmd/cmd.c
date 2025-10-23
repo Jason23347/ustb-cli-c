@@ -16,6 +16,14 @@ extern int print_speedtest_help(int argc, char **argv);
 extern struct globconf global_config;
 
 const struct cmd_option commands[] = {
+#ifdef WITH_COMPLETION
+    {
+        .name = "completion",
+        .description = "Generate completion",
+        .cmd_func = &cmd_completion,
+        .cmd_help = &print_default_help,
+    },
+#endif
 #ifdef WITH_ACCOUNT
     {
         .name = "login",
@@ -104,6 +112,8 @@ const struct cag_option global_options[] = {
     },
 #endif
 };
+const size_t global_options_count =
+    sizeof(global_options) / sizeof(global_options[0]);
 
 struct globconf global_config = {
     .need_help = 0,
