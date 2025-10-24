@@ -66,3 +66,13 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
 ### 其他平台
 
 你自己写toolchain file吧...
+
+## 代码补全
+
+目前只适配了zsh，后续还将适配bash
+
+把下面这段代码放入`~/.zshrc`
+
+```zsh
+eval "$(ustb-cli completion zsh)"
+```
