@@ -6,29 +6,6 @@
 #include <string.h>
 
 int
-gstr_init(gstr_t *str, size_t maxlen) {
-    str->s = malloc(maxlen);
-    if (str->s == NULL) {
-        return -1;
-    }
-
-    str->len = 0;
-    str->cap = maxlen;
-    str->s[0] = '\0';
-
-    return 0;
-}
-
-void
-gstr_free(gstr_t *str) {
-    free(str->s);
-
-    str->s = NULL;
-    str->len = 0;
-    str->cap = 0;
-}
-
-int
 gstr_appendf(gstr_t *str, const char *fmt, ...) {
     if (!str || !str->s || str->cap == 0) {
         return -1;

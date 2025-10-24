@@ -36,8 +36,6 @@ typedef struct {
 int gstr_extract(void *dest, const char *src, const gstr_t *fmt,
                  const gstr_t *prefix, int quoted);
 
-int gstr_init(gstr_t *str, size_t maxlen);
-void gstr_free(gstr_t *str);
 int gstr_appendf(gstr_t *str, const char *fmt, ...);
 
 #endif /* GSTR_H */
