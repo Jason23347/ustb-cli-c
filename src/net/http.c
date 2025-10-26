@@ -50,8 +50,7 @@ http_connect(http_t *http) {
 int
 http_request(const http_t *http, const gstr_t *path) {
     /* Host请求头是增加幸福感的关键，不能删掉 */
-    const char method[] = "GET";
-    size_t req_len = path->len + 24 + sizeof(method) + strlen(http->domain);
+    size_t req_len = path->len + 26 + strlen(http->domain);
     char req[req_len];
     snprintf(req, req_len,
              "GET %s HTTP/1.1\r\n"
