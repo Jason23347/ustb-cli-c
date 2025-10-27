@@ -2,11 +2,13 @@
 
 #include "cmd.h"
 
-#include "gstr.h"
+#include "lib/decode.h"
+#include "lib/gstr.h"
 #include "net/http.h"
 
 #include <cargs.h>
 
+#include <iconv.h>
 #include <pwd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +24,15 @@ typedef struct login {
     const char *ipv6_addr;
     const char *env_filepath;
 } login_t;
+
+typedef struct whoami {
+    enum {
+        PRINT_UNAME = 0,
+#define PRINT_DEFAULT PRINT_UNAME
+        PRINT_ALL = 1,
+        PRINT_NID = 2,
+    } mode;
+} whoami_t;
 
 const struct cag_option login_options[] = {
     {
@@ -39,12 +50,36 @@ const struct cag_option login_options[] = {
         .description = "Enable IPV6 or not, default true",
     },
 };
-const size_t login_opt_count = sizeof(login_options) / sizeof(login_options[0]);
+const size_t login_opt_count = CAG_ARRAY_SIZE(login_options);
+
+const struct cag_option whoami_options[] = {
+    {
+        .identifier = 'a',
+        .access_letters = "a",
+        .access_name = NULL,
+        .value_name = NULL,
+        .description = "Print full information",
+    },
+    {
+        .identifier = 'N',
+        .access_letters = "N",
+        .access_name = NULL,
+        .value_name = NULL,
+        .description = "Print NID",
+    },
+};
+const size_t whoami_opt_count = CAG_ARRAY_SIZE(whoami_options);
 
 int
 print_login_help(int argc, char **argv) {
     return print_command_help(argc, argv, login_options,
                               CAG_ARRAY_SIZE(login_options));
+}
+
+int
+print_whoami_help(int argc, char **argv) {
+    return print_command_help(argc, argv, whoami_options,
+                              CAG_ARRAY_SIZE(whoami_options));
 }
 
 static int
@@ -287,8 +322,41 @@ cmd_logout(int argc, char **argv) {
 }
 
 int
+whoami_get_config(whoami_t *config, int argc, char **argv) {
+    cag_option_context context;
+
+    cag_option_init(&context, whoami_options, CAG_ARRAY_SIZE(whoami_options),
+                    argc, argv);
+    while (cag_option_fetch(&context)) {
+        switch (cag_option_get_identifier(&context)) {
+        case 'N':
+            config->mode = PRINT_NID;
+            break;
+        case 'a':
+            config->mode = PRINT_ALL;
+            break;
+        case '?':
+            cag_option_print_error(&context, stdout);
+            print_whoami_help(argc + 1, argv - 1);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int
 cmd_whoami(int argc, char **argv) {
     int res;
+
+    whoami_t config[1] = {{
+        .mode = PRINT_DEFAULT,
+    }};
+
+    res = whoami_get_config(config, argc, argv);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
 
@@ -297,13 +365,34 @@ cmd_whoami(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    char username[MAX_VAR_LEN];
+    char username[MAX_VAR_LEN] = {0};
     res = extract(username, content, "%[^']s", "uid", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }
+    char nid[MAX_VAR_LEN] = {0};
+    res = extract(nid, content, "%[^']s", "NID", 1);
+    if (res < 0) {
+        return EXIT_FAILURE;
+    }
 
-    printf("%s", username);
+    /* GBK → UTF-8 */
+    gstr_t nid_str[1] = {{
+        .s = nid,
+        .len = strlen(nid),
+        .cap = sizeof(nid),
+    }};
+    gstr_t *nid_utf8 = decode_gb2312(nid_str);
+
+    if (config->mode == PRINT_UNAME) {
+        printf("%s", username);
+    } else if (config->mode == PRINT_NID) {
+        printf("%s", nid);
+    } else if (config->mode == PRINT_ALL) {
+        printf("%s (%s)\n", username, nid_utf8->s);
+    } else {
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }

@@ -1,7 +1,7 @@
 #ifndef HTTP_H
 #define HTTP_H
 
-#include "gstr.h"
+#include "lib/gstr.h"
 #include "tcp.h"
 
 #define MAX_BUF_SIZE 4096

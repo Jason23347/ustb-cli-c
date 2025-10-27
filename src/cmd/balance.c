@@ -4,7 +4,7 @@
 
 #include "calc/fee.h"
 #include "calc/flow.h"
-#include "gstr.h"
+#include "lib/gstr.h"
 #include "net/http.h"
 #include "terminal.h"
 
@@ -28,42 +28,28 @@ info_has_ipv6(const info_t *info) {
     return ((mode == 4) || (mode == 12));
 }
 
+static int
+logged_in(const char *content) {
+    return strstr(content, "uid=") != NULL;
+}
+
 int
-info_fetch(info_t *info) {
+info_fetch(info_t *info, const char *content) {
     int res;
 
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
-
-    const char *content = http_get_root(http);
-    if (content == NULL) {
-        return -1;
-    }
-
-    const char *p = strstr(content, "<script");
-    if (p == NULL) {
-        return -1;
-    }
-
-    if (strstr(p, "uid=") == NULL) {
-        set_color(YELLOW);
-        printf("Login required.\n");
-        reset_color();
-        return -1;
-    }
-
-    res = extract(&info->curr_flow, p, uint64_spec, "flow", 1);
+    res = extract(&info->curr_flow, content, uint64_spec, "flow", 1);
     if (res < 0) {
         return -1;
     }
-    res = extract(&info->curr_flow_v6, p, uint64_spec, "v6df", 0);
+    res = extract(&info->curr_flow_v6, content, uint64_spec, "v6df", 0);
     if (res < 0) {
         return -1;
     }
-    res = extract(&info->ipv6_mode, p, "%u", "v46m", 0);
+    res = extract(&info->ipv6_mode, content, "%u", "v46m", 0);
     if (res < 0) {
         return -1;
     }
-    res = extract(&info->fee, p, "%u", "fee", 1);
+    res = extract(&info->fee, content, "%u", "fee", 1);
     if (res < 0) {
         return -1;
     }
@@ -71,8 +57,8 @@ info_fetch(info_t *info) {
     /* FIXME: Don't know why */
     info->curr_flow_v6 /= 4;
 
-    extract(&info->ipv4_addr, p, "%15[^']", "v4ip", 1);
-    extract(&info->ipv6_addr, p, "%39[^']", "v6ip", 1);
+    extract(&info->ipv4_addr, content, "%15[^']", "v4ip", 1);
+    extract(&info->ipv6_addr, content, "%39[^']", "v6ip", 1);
 
     return 0;
 }
@@ -123,7 +109,26 @@ cmd_info(int argc, char **argv) {
     int res;
     info_t info[1] = {0};
 
-    res = info_fetch(info);
+    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+
+    const char *content = http_get_root(http);
+    if (content == NULL) {
+        return -1;
+    }
+
+    const char *p = strstr(content, "<script");
+    if (p == NULL) {
+        return -1;
+    }
+
+    if (!logged_in(p)) {
+        set_color(YELLOW);
+        printf("Login required.\n");
+        reset_color();
+        return -1;
+    }
+
+    res = info_fetch(info, p);
     if (res != 0) {
         return EXIT_FAILURE;
     }
@@ -145,6 +150,13 @@ cmd_fee(int argc, char **argv) {
     const char *content = http_get_root(http);
     if (content == NULL) {
         return -1;
+    }
+
+    if (!logged_in(content)) {
+        set_color(YELLOW);
+        printf("Login required.\n");
+        reset_color();
+        return EXIT_FAILURE;
     }
 
     const char *p = strstr(content, "<script");

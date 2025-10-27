@@ -1,6 +1,5 @@
 #include "tcp.h"
 
-#include "gstr.h"
 #include "socket.h"
 
 #include <arpa/inet.h>
