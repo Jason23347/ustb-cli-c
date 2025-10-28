@@ -21,14 +21,27 @@ typedef struct {
         buf[0] = '\0';                                                         \
         gstr_t _g = {                                                          \
             .s = (buf),                                                        \
-            .len = strlen(buf),                                                \
+            .len = 0,                                                          \
             .cap = _cap,                                                       \
         };                                                                     \
-        _g;                                                                   \
+        _g;                                                                    \
     })
 
 #define gstr_from_const(str)                                                   \
     (gstr_t) { .s = (char *)(str), .len = strlen(str), .cap = strlen(str) + 1, }
+
+#define gstr_alloca(maxlen)                                                    \
+    ({                                                                         \
+        size_t _cap = maxlen;                                                  \
+        char *buf = alloca(_cap);                                              \
+        buf[0] = '\0';                                                         \
+        gstr_t _g = {                                                          \
+            .s = (buf),                                                        \
+            .len = 0,                                                          \
+            .cap = _cap,                                                       \
+        };                                                                     \
+        _g;                                                                    \
+    })
 
 #define extract(dest, src, fmt, prefix, quoted)                                \
     gstr_extract((dest), (src), &gstr_from_const(fmt),                         \

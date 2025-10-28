@@ -42,24 +42,25 @@ int
 gstr_extract(void *dest, const char *src, const gstr_t *fmt,
              const gstr_t *prefix, int quoted) {
     int res = 0;
+    char dummy[2];
 
-    size_t len = prefix->len + fmt->len + 4;
-    char buffer[len];
-
-    gstr_t tmp[1] = {gstr_from_buf(buffer)};
+    size_t len = prefix->len + fmt->len + 12;
+    gstr_t tmp[1] = {gstr_alloca(len)};
     gstr_appendf(tmp, "%s=", prefix->s);
 
     char *p = strstr(src, tmp->s);
     if (p == NULL) {
         return -1;
     }
+
     if (quoted) {
-        gstr_appendf(tmp, "'%s'", fmt->s);
+        const char percent = '%';
+        gstr_appendf(tmp, "%c['\"]%s%c['\"]", percent, fmt->s, percent);
+        res = sscanf(p, tmp->s, &dummy[0], dest, &dummy[1]);
     } else {
         gstr_appendf(tmp, "%s", fmt->s);
+        res = sscanf(p, tmp->s, dest);
     }
-
-    res = sscanf(p, tmp->s, dest);
 
     return res;
 }

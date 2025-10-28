@@ -4,7 +4,9 @@
 
 #include "lib/decode.h"
 #include "lib/gstr.h"
+#include "lib/hash.h"
 #include "net/http.h"
+#include "terminal.h"
 
 #include <cargs.h>
 
@@ -12,18 +14,51 @@
 #include <pwd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #define MAX_LINE_LEN            128
 #define MAX_VAR_LEN             40
 #define MAX_PATH_LEN            200
 #define URLENCODED_IPV6_MAX_LEN (40 + 7 * 2)
+#define MAX_ONLINE_DEVICE_COUNT 4
+#define MAC_HEX_LEN             12
+#define MAC_FORMATTED_LEN       17
+
+#define min(a, b) ((a < b) ? a : b)
 
 typedef struct login {
     int use_ipv6;
     const char *ipv6_addr;
     const char *env_filepath;
 } login_t;
+
+typedef struct {
+    gstr_t username[1];
+    gstr_t password[1];
+} account_t;
+
+typedef struct device_info {
+    char ipv4_addr[16];
+    char ipv6_addr[40];
+    char mac[MAC_FORMATTED_LEN + 1];
+} device_info_t;
+
+typedef struct device {
+    int watch_mode;
+    int output_markdown;
+    int with_separator;
+    int watch_seconds;
+    const char *env_filepath;
+} device_t;
+
+typedef struct {
+    char *account;
+    char pw_hash[MD5_LEN];
+    char checkcode[5];
+    char *submit;
+    int trytimes;
+} device_form_t;
 
 typedef struct whoami {
     enum {
@@ -70,6 +105,45 @@ const struct cag_option whoami_options[] = {
 };
 const size_t whoami_opt_count = CAG_ARRAY_SIZE(whoami_options);
 
+const struct cag_option devices_options[] = {
+    {
+        .identifier = 'c',
+        .access_letters = "c",
+        .access_name = "env",
+        .value_name = "FILEPATH",
+        .description = "Specify env file path, default ~/" USTB_ENV_FILENAME,
+    },
+    {
+        .identifier = 'm',
+        .access_letters = "m",
+        .access_name = "output-markdown",
+        .value_name = NULL,
+        .description = "Output results in Markdown table format",
+    },
+    {
+        .identifier = 'f',
+        .access_letters = "f",
+        .access_name = "with-separator",
+        .value_name = NULL,
+        .description = "Display MAC addresses with separators",
+    },
+    {
+        .identifier = 'w',
+        .access_letters = "w",
+        .access_name = "watch",
+        .value_name = NULL,
+        .description = "Continuously watch for changes",
+    },
+    {
+        .identifier = 't',
+        .access_letters = "t",
+        .access_name = NULL,
+        .value_name = "SECONDS",
+        .description = "Set the refresh interval for watch mode",
+    },
+};
+const size_t devices_opt_count = CAG_ARRAY_SIZE(devices_options);
+
 int
 print_login_help(int argc, char **argv) {
     return print_command_help(argc, argv, login_options,
@@ -82,9 +156,14 @@ print_whoami_help(int argc, char **argv) {
                               CAG_ARRAY_SIZE(whoami_options));
 }
 
+int
+print_devices_help(int argc, char **argv) {
+    return print_command_help(argc, argv, devices_options,
+                              CAG_ARRAY_SIZE(devices_options));
+}
+
 static int
-login_load_env(const char *env_filepath, char *username, char *password,
-               size_t maxlen) {
+account_load_env(account_t *account, const char *env_filepath) {
     // Check if config->env_filepath exists.
     if (access(env_filepath, F_OK) != 0) {
         fprintf(stderr, "Env file does not exist: \"%s\"\n", env_filepath);
@@ -101,14 +180,16 @@ login_load_env(const char *env_filepath, char *username, char *password,
     while (fgets(line, sizeof(line), fp)) {
         // get USERNAME=xxx and PASSWORD=xxx
         if (0 == strncmp(line, USTB_USERNAME_VAR "=", USTB_USERNAME_LEN)) {
-            snprintf(username, maxlen, "%.*s", (int)(maxlen - 1),
-                     line + USTB_USERNAME_LEN);
-            username[strcspn(username, "\r\n")] = '\0';
+            gstr_t *username = account->username;
+            size_t offset = strcspn(line, "\r\n");
+            line[offset] = '\0';
+            gstr_appendf(username, "%s", line + USTB_USERNAME_LEN);
         } else if (0 ==
                    strncmp(line, USTB_PASSWORD_VAR "=", USTB_PASSWORD_LEN)) {
-            snprintf(password, maxlen, "%.*s", (int)(maxlen - 1),
-                     line + USTB_USERNAME_LEN);
-            password[strcspn(password, "\r\n")] = '\0';
+            gstr_t *password = account->password;
+            size_t offset = strcspn(line, "\r\n");
+            line[offset] = '\0';
+            gstr_appendf(password, "%s", line + USTB_USERNAME_LEN);
         }
     }
     fclose(fp);
@@ -136,24 +217,25 @@ ipv6_urlencode(char *dest, const char *ipv6_addr, size_t maxlen) {
 
 static int
 login_url_path(const login_t *config, gstr_t *str) {
-    char username[MAX_VAR_LEN] = "";
-    char password[MAX_VAR_LEN] = "";
+    account_t account[1] = {{
+        .username = {gstr_alloca(MAX_VAR_LEN)},
+        .password = {gstr_alloca(MAX_VAR_LEN)},
+    }};
 
     // Get username & password
-    int res =
-        login_load_env(config->env_filepath, username, password, MAX_VAR_LEN);
+    int res = account_load_env(account, config->env_filepath);
     if (res != 0) {
         return -1;
     }
 
-    if (username[0] == '\0' || password[0] == '\0') {
+    if ((account->username->len == 0) || (account->password->len == 0)) {
         fprintf(stderr, USTB_USERNAME_VAR " or " USTB_PASSWORD_VAR
                                           " not found in env file\n");
         return -1;
     }
 
     gstr_appendf(str, LOGIN_PATH "?callback=a&DDDDD=%s&upass=%s&0MKKey=123456",
-                 username, password);
+                 account->username->s, account->password->s);
     if (config->use_ipv6) {
         char ipv6_encoded[URLENCODED_IPV6_MAX_LEN];
         ipv6_urlencode(ipv6_encoded, config->ipv6_addr, sizeof(ipv6_encoded));
@@ -269,8 +351,8 @@ cmd_login(int argc, char **argv) {
 
     // Fix env filepath
     if (config->env_filepath == NULL) {
+        gstr_t home_str[1] = {gstr_alloca(MAX_PATH_LEN)};
         // fallback to default env
-        gstr_t home_str[1] = {gstr_from_buf(filepath_buf)};
         int res = get_defule_env_path(home_str);
         if (res != 0) {
             return -1;
@@ -293,8 +375,7 @@ cmd_login(int argc, char **argv) {
     printf("\n");
 
     // Assemble URL path
-    char buf[MAX_PATH_LEN] = {0};
-    gstr_t path[1] = {gstr_from_buf(buf)};
+    gstr_t path[1] = {gstr_alloca(MAX_PATH_LEN)};
     res = login_url_path(config, path);
     if (res != 0) {
         return EXIT_FAILURE;
@@ -366,12 +447,12 @@ cmd_whoami(int argc, char **argv) {
     }
 
     char username[MAX_VAR_LEN] = {0};
-    res = extract(username, content, "%[^']s", "uid", 1);
+    res = extract(username, content, "%[^'\"]s", "uid", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }
     char nid[MAX_VAR_LEN] = {0};
-    res = extract(nid, content, "%[^']s", "NID", 1);
+    res = extract(nid, content, "%[^'\"]s", "NID", 1);
     if (res < 0) {
         return EXIT_FAILURE;
     }
@@ -393,6 +474,404 @@ cmd_whoami(int argc, char **argv) {
     } else {
         return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
+}
+
+int
+device_get_form(device_form_t *form, http_t *http, cookiejar_t *cookiejar,
+                const account_t *account) {
+    char *content =
+        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL, cookiejar);
+
+    extract(form->checkcode, content, "%[^'\"]", "checkcode", 1);
+
+    char buf[MAX_VAR_LEN];
+    extract(buf, content, "%[^'\"]", "trytimes", 1);
+    if (strcmp(buf, "null") == 0) {
+        form->trytimes = 0;
+    } else { /* 假设 trytimes < 10 */
+        form->trytimes = buf[0] - '0';
+    }
+
+    if (form->trytimes >= 3) {
+        return -1;
+    }
+
+    form->account = account->username->s;
+    md5(form->pw_hash, account->password->s);
+    /* 登[空格]录 */
+    form->submit = "\%E7\%99\%BB+\%E5\%BD\%95";
+
+    return 0;
+}
+
+static char *
+step_in(const char *p, const char *tag_name) {
+    char *pos;
+    const char br_left = '<', br_right = '>';
+
+    gstr_t tag[1] = {gstr_alloca(strlen(tag_name) + 2)};
+    gstr_appendf(tag, "%c%s", br_left, tag_name);
+
+    /* <tag_name ...> */
+    pos = strstr(p, tag->s);
+    if (pos == NULL) {
+        return NULL;
+    }
+    pos = strchr(pos, br_right);
+    return (pos + 1);
+}
+
+static char *
+step_out(const char *p, const char *tag_name) {
+    char *pos;
+    const char br_left = '<', br_right = '>';
+
+    gstr_t tag[1] = {gstr_alloca(strlen(tag_name) + 4)};
+    gstr_appendf(tag, "%c/%s%c", br_left, tag_name, br_right);
+
+    /* </tag_name ...> */
+    pos = strstr(p, tag->s);
+    if (pos == NULL) {
+        return NULL;
+    }
+    return (pos + tag->len);
+}
+
+int
+devices_parse(device_info_t *devices, const char *content, size_t count) {
+    size_t i = 0;
+    size_t len;
+    const char *p = content;
+    const char *h1, *h2, *h3;
+    const char *t1, *t2, *t3;
+
+    p = step_in(p, "tbody");
+    if (p == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < count; i++) {
+        device_info_t *device = &devices[i];
+
+        p = step_in(p, "tr");
+        if (p == NULL) {
+            break;
+        }
+
+        /* 1st col: IPV4 address */
+        p = step_in(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+        h1 = p;
+        p = step_out(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+
+        /* 2nd col: IPV6 address */
+        p = step_in(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+        h2 = p;
+        p = step_out(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+
+        /* 3rd col: MAC address */
+        p = step_in(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+        h3 = p;
+        p = step_out(p, "td");
+        if (p == NULL) {
+            return -1;
+        }
+
+        p = step_out(p, "tr");
+        if (p == NULL) {
+            return -1;
+        }
+
+        /* 1st col: IPV4 address */
+        t1 = strchr(h1, '&');
+        if (t1 == NULL) {
+            const char stop[] = " <\r\n";
+            t1 = strpbrk(h1, stop);
+            if (t1 == NULL) {
+                return -1;
+            }
+        }
+
+        len = t1 - h1;
+        snprintf(device->ipv4_addr, min(len + 1, sizeof(device->ipv4_addr)),
+                 "%s", h1);
+
+        /* 2nd col: IPV6 address */
+        t2 = strchr(h2, '&');
+        if (t2 == NULL) {
+            const char stop[] = " <\r\n";
+            t2 = strpbrk(h2, stop);
+            if (t2 == NULL) {
+                return -1;
+            }
+        }
+
+        len = t2 - h2;
+        snprintf(device->ipv6_addr, min(len + 1, sizeof(device->ipv6_addr)),
+                 "%s", h2);
+
+        /* 3rd col: MAC address */
+        t3 = strchr(h3, '&');
+        if (t3 == NULL) {
+            const char stop[] = " <\r\n";
+            t3 = strpbrk(h3, stop);
+            if (t3 == NULL) {
+                return -1;
+            }
+        }
+
+        len = t3 - h3;
+        snprintf(device->mac, min(len + 1, sizeof(device->mac)), "%s", h3);
+    }
+
+    return i;
+}
+
+int
+devices_get_config(device_t *config, int argc, char **argv) {
+    const char *value;
+    cag_option_context context;
+
+    cag_option_init(&context, devices_options, CAG_ARRAY_SIZE(devices_options),
+                    argc, argv);
+    while (cag_option_fetch(&context)) {
+        switch (cag_option_get_identifier(&context)) {
+        case 'c':
+            value = cag_option_get_value(&context);
+            if (value != NULL && strlen(value) != 0) {
+                config->env_filepath = value;
+            }
+            break;
+        case 'm':
+            config->output_markdown = 1;
+            break;
+        case 'f':
+            config->with_separator = 1;
+            break;
+        case 'w':
+            config->watch_mode = 1;
+            break;
+        case 't':
+            value = cag_option_get_value(&context);
+            if (value != NULL && strlen(value) != 0) {
+                config->watch_seconds = atoi(value);
+            }
+            break;
+        case '?':
+            cag_option_print_error(&context, stdout);
+            print_whoami_help(argc + 1, argv - 1);
+            return -1;
+        }
+    }
+
+    if (config->watch_mode) {
+        if (config->watch_seconds <= 0) {
+            config->watch_seconds = 3;
+        }
+    }
+
+    return 0;
+}
+
+int
+devices_login(http_t *http, cookiejar_t *cookiejar, const account_t *account) {
+    char *content;
+    device_form_t form[1];
+
+    // 1. Get checkcode & trytime
+    content =
+        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL, cookiejar);
+    if (content == NULL) {
+        return -1;
+    }
+    device_get_form(form, http, cookiejar, account);
+    free(content);
+
+    // 2. Get random code (never use)
+    content = http_request(http, &gstr_from_const(DRCOM_RANDOMCODE_PATH), NULL,
+                           cookiejar);
+    if (content == NULL) {
+        return -1;
+    }
+    free(content);
+
+    // 3. login request
+    gstr_t data[1] = {gstr_alloca(MAX_PATH_LEN)};
+    gstr_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
+                 form->account, form->pw_hash, form->checkcode, form->submit);
+    content =
+        http_request(http, &gstr_from_const(DRCOM_LOGIN_PATH), data, cookiejar);
+    free(content);
+
+    return 0;
+}
+
+int
+devices_check_online(device_info_t *devices, http_t *http,
+                     cookiejar_t *cookiejar, size_t maxlen) {
+    char *content;
+
+    // 4. Check online devices
+    content = http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL,
+                           cookiejar);
+    int device_count = devices_parse(devices, content, maxlen);
+    free(content);
+    if (device_count == -1) {
+        /* Maybe login failed */
+        return -1;
+    }
+
+    return device_count;
+}
+
+void
+devices_format_mac(device_info_t *devices, size_t device_count) {
+    char hex[MAC_HEX_LEN + 1];
+
+    for (size_t i = 0; i < device_count; i++) {
+        device_info_t *device = &devices[i];
+
+        assert(strlen(device->mac) == MAC_HEX_LEN);
+
+        memcpy(hex, device->mac, sizeof(hex));
+        snprintf(device->mac, sizeof(device->mac),
+                 "%c%c:%c%c:%c%c:%c%c:%c%c:%c%c", hex[0], hex[1], hex[2],
+                 hex[3], hex[4], hex[5], hex[6], hex[7], hex[8], hex[9],
+                 hex[10], hex[11]);
+    }
+}
+
+void
+devices_output(device_t *config, device_info_t *devices, size_t device_count) {
+    const char *header_format;
+    const char *body_format;
+
+    if (config->output_markdown) {
+        header_format = "| %-15s | %-39s | %-17s |\n| :-------------- | "
+                        ":-------------------------------------- | "
+                        ":---------------- |\n";
+        body_format = "| %-15s | %-39s | %-17s |\n";
+    } else {
+        header_format = "%-15s %-39s %s\n";
+        body_format = "%-15s %-39s %-17s\n";
+    }
+
+    if (config->watch_mode) {
+        time_t t;
+        time(&t);
+        printf("  %s", ctime(&t));
+    }
+
+    // Check MAC format
+    if (config->with_separator) {
+        devices_format_mac(devices, device_count);
+    }
+
+    printf(header_format, "IPV4 Address", "IPV6 Address", "MAC");
+    for (size_t i = 0; i < device_count; i++) {
+        device_info_t device = devices[i];
+        printf(body_format, device.ipv4_addr, device.ipv6_addr, device.mac);
+    }
+    for (size_t i = device_count; i < MAX_ONLINE_DEVICE_COUNT; i++) {
+        for (int j = 0; j < 82; j++) {
+            printf(" ");
+        }
+        printf("\n");
+    }
+
+    if (config->watch_mode) {
+        for (size_t i = 0; i < MAX_ONLINE_DEVICE_COUNT; i++) {
+            move_up_head();
+        }
+        /* header line */
+        move_up_head();
+        /* Time line */
+        move_up_head();
+
+        fflush(stdout);
+    }
+}
+
+int
+cmd_devices(int argc, char **argv) {
+    int res;
+
+    device_t config[1] = {{
+        .env_filepath = NULL,
+        .output_markdown = 0,
+        .watch_mode = 0,
+        .watch_seconds = 0,
+        .with_separator = 0,
+    }};
+    account_t account[1] = {{
+        .username = {gstr_alloca(MAX_VAR_LEN)},
+        .password = {gstr_alloca(MAX_VAR_LEN)},
+    }};
+    device_info_t devices[MAX_ONLINE_DEVICE_COUNT];
+    size_t max_online_count = sizeof(devices) / sizeof(devices[0]);
+
+    char *content;
+    http_t *http;
+    cookiejar_t *cookiejar = cookiejar_init(MAX_LINE_LEN);
+
+    res = devices_get_config(config, argc, argv);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
+
+    // Fix env filepath
+    if (config->env_filepath == NULL) {
+        gstr_t home_str[1] = {gstr_alloca(MAX_PATH_LEN)};
+        // fallback to default env
+        res = get_defule_env_path(home_str);
+        if (res != 0) {
+            return EXIT_FAILURE;
+        }
+        config->env_filepath = home_str->s;
+    }
+
+    // Get username & password
+    res = account_load_env(account, config->env_filepath);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
+
+    // Init HTTP
+    http = http_init(DRCOM_HOST, DRCOM_PORT, IPV4_ONLY);
+
+    // Perform login
+    res = devices_login(http, cookiejar, account);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
+
+    do {
+        // Fetch online devices
+        int device_count =
+            devices_check_online(devices, http, cookiejar, max_online_count);
+        // Output
+        devices_output(config, devices, device_count);
+
+        if (config->watch_mode) {
+            sleep(config->watch_seconds);
+        }
+    } while (config->watch_mode);
 
     return EXIT_SUCCESS;
 }

@@ -31,6 +31,12 @@ int debugf(const char *fmt, ...);
 #define SPEEDTEST_PORT          80
 #define SPEEDTEST_UPLOAD_PATH   "/backend/empty.php"
 #define SPEEDTEST_DOWNLOAD_PATH "/backend/garbage.php"
+#define DRCOM_HOST              "202.204.60.7"
+#define DRCOM_PORT              8080
+#define DRCOM_FORM_PATH         "/nav_login"
+#define DRCOM_RANDOMCODE_PATH   "/RandomCodeAction.action"
+#define DRCOM_LOGIN_PATH        "/LoginAction.action"
+#define DRCOM_DEVICES_PATH      "/nav_offLine"
 #define USTB_ENV_FILENAME       ".ustb.env"
 #define USTB_USERNAME_VAR       "USTB_USERNAME"
 #define USTB_USERNAME_LEN       sizeof(USTB_USERNAME_VAR)

@@ -12,6 +12,9 @@ extern const size_t login_opt_count;
 extern const struct cag_option whoami_options[];
 extern const size_t whoami_opt_count;
 
+extern const struct cag_option devices_options[];
+extern const size_t devices_opt_count;
+
 extern const struct cag_option speedtest_options[];
 extern const size_t speedtest_opt_count;
 
@@ -196,6 +199,8 @@ completion_zsh_print_function(const char *program) {
     completion_zsh_print_opts("sub_opts_login", login_options, login_opt_count);
     completion_zsh_print_opts("sub_opts_whoami", whoami_options,
                               whoami_opt_count);
+    completion_zsh_print_opts("sub_opts_devices", devices_options,
+                              devices_opt_count);
     completion_zsh_print_opts("sub_opts_speedtest", speedtest_options,
                               speedtest_opt_count);
 

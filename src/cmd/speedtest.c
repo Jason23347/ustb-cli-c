@@ -114,16 +114,16 @@ speedtest_download(const speedtest_t *config) {
 
     http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
 
-    gstr_t str[1] = {gstr_from_buf(buf)};
+    gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
     r = random_d();
     gstr_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
                  config->filesizeMB);
 
     http_connect(http);
-    http_request(http, str);
-    http_skip_section(http, buf, sizeof(buf));
+    http_send_request(http, str, NULL, NULL);
+    http_section(http, buf, sizeof(buf));
 
-    total = config->filesizeMB * ((1024 * 1024) / sizeof(buf));
+    total = config->filesizeMB * ((MB * 1024) / sizeof(buf));
 
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
@@ -161,7 +161,7 @@ speedtest_upload(const speedtest_t *config) {
 
     http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
 
-    gstr_t str[1] = {gstr_from_buf(buf)};
+    gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
     r = random_d();
     gstr_appendf(str, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
 

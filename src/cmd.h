@@ -35,6 +35,7 @@ int cmd_fee(int argc, char **argv);
 int cmd_login(int argc, char **argv);
 int cmd_logout(int argc, char **argv);
 int cmd_whoami(int argc, char **argv);
+int cmd_devices(int argc, char **argv);
 // speedtest
 int cmd_speedtest(int argc, char **argv);
 int cmd_monitor(int argc, char **argv);

@@ -12,6 +12,7 @@
 extern int print_default_help(int argc, char **argv);
 extern int print_login_help(int argc, char **argv);
 extern int print_whoami_help(int argc, char **argv);
+extern int print_devices_help(int argc, char **argv);
 extern int print_speedtest_help(int argc, char **argv);
 
 extern struct globconf global_config;
@@ -47,6 +48,14 @@ const struct cmd_option commands[] = {
         .description = "Show current user",
         .cmd_func = &cmd_whoami,
         .cmd_help = &print_whoami_help,
+    },
+#endif
+#ifdef WITH_ACCOUNT
+    {
+        .name = "devices",
+        .description = "Show online devices",
+        .cmd_func = &cmd_devices,
+        .cmd_help = &print_devices_help,
     },
 #endif
 #ifdef WITH_BALANCE
