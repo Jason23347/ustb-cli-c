@@ -16,10 +16,6 @@ jobs:
       matrix:
         architecture: [ x86_64, ARM64, ARM32 ]
         build_type: [ Debug, Release ]
-        with_balance: [ on, off ]
-        with_color: [ on, off ]
-        with_account: [ on, off ]
-        with_speedtest: [ on, off ]
 
     steps:
       - name: Checkout source
@@ -51,30 +47,18 @@ jobs:
               echo "🔧 Native x86_64 build"
               cmake .. \
                 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-                -DWITH_BALANCE=${{ matrix.with_balance }} \
-                -DWITH_COLOR=${{ matrix.with_color }} \
-                -DWITH_ACCOUNT=${{ matrix.with_account }} \
-                -DWITH_SPEEDTEST=${{ matrix.with_speedtest }}
               ;;
             ARM64)
               echo "🔧 Cross-compiling for ARM64"
               cmake .. \
                 -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
                 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-                -DWITH_BALANCE=${{ matrix.with_balance }} \
-                -DWITH_COLOR=${{ matrix.with_color }} \
-                -DWITH_ACCOUNT=${{ matrix.with_account }} \
-                -DWITH_SPEEDTEST=${{ matrix.with_speedtest }}
               ;;
             ARM32)
               echo "🔧 Cross-compiling for ARM32"
               cmake .. \
                 -DCMAKE_TOOLCHAIN_FILE=../armhf-toolchain.cmake \
                 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-                -DWITH_BALANCE=${{ matrix.with_balance }} \
-                -DWITH_COLOR=${{ matrix.with_color }} \
-                -DWITH_ACCOUNT=${{ matrix.with_account }} \
-                -DWITH_SPEEDTEST=${{ matrix.with_speedtest }}
               ;;
           esac
 
