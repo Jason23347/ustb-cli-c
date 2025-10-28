@@ -39,7 +39,11 @@ ustb-cli speedtest -c=200 --upload -db # 基于cargs支持长短参数解析
 mkdir -p build && cd build
 cmake .. \
 	-DWITH_COLOR=on \
-	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+	-DWITH_BALANCE=on \
+	-DWITH_ACCOUNT=on \
+	-DWITH_SPEEDTEST=on \
+	-DWITH_COMPLETION=on \
+	-DGB2312_DECODER="iconv"
 ```
 
 ### x86_64交叉编译到ARM64
@@ -48,7 +52,11 @@ cmake .. \
 mkdir -p build && cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
 	-DWITH_COLOR=on \
-	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+	-DWITH_BALANCE=on \
+	-DWITH_ACCOUNT=on \
+	-DWITH_SPEEDTEST=on \
+	-DWITH_COMPLETION=on \
+	-DGB2312_DECODER="iconv"
 ```
 
 ### 编译到OpenWrt (MUSL)
@@ -58,10 +66,14 @@ mkdir -p build && cd build
 export STAGING_DIR=<OpenWrt SDK path>/staging_dir
 cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
 	-DWITH_COLOR=on \
-	-DWITH_BALANCE=on -DWITH_ACCOUNT=on -DWITH_SPEEDTEST=on
+	-DWITH_BALANCE=on \
+	-DWITH_ACCOUNT=on \
+	-DWITH_SPEEDTEST=on \
+	-DWITH_COMPLETION=off \
+	-DGB2312_DECODER="disabled"
 ```
 
-例如我的`OPENWRT_ROOT`为`$HOME/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64`
+例如我的`<OpenWrt SDK path>`为`$HOME/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64`
 
 ### 其他平台
 
