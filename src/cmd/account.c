@@ -25,7 +25,7 @@
 #define MAC_HEX_LEN             12
 #define MAC_FORMATTED_LEN       17
 
-#define min(a, b) ((a < b) ? a : b)
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 typedef struct login {
     int use_ipv6;
@@ -609,7 +609,7 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
         }
 
         len = t1 - h1;
-        snprintf(device->ipv4_addr, min(len + 1, sizeof(device->ipv4_addr)),
+        snprintf(device->ipv4_addr, min(len + 1, sizeof(device->ipv4_addr) - 1),
                  "%s", h1);
 
         /* 2nd col: IPV6 address */
@@ -623,7 +623,7 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
         }
 
         len = t2 - h2;
-        snprintf(device->ipv6_addr, min(len + 1, sizeof(device->ipv6_addr)),
+        snprintf(device->ipv6_addr, min(len + 1, sizeof(device->ipv6_addr) - 1),
                  "%s", h2);
 
         /* 3rd col: MAC address */
@@ -637,7 +637,7 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
         }
 
         len = t3 - h3;
-        snprintf(device->mac, min(len + 1, sizeof(device->mac)), "%s", h3);
+        snprintf(device->mac, min(len + 1, sizeof(device->mac) - 1), "%s", h3);
     }
 
     return i;
