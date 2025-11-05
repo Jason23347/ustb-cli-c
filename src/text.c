@@ -2,6 +2,7 @@
 
 #include "cmd.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,23 +22,29 @@ debugf(const char *fmt, ...) {
     return ret;
 }
 
-/* 手动添加小数点 */
 void
 assign_decimal(char *str, size_t maxlen, int64_t number, size_t n) {
-    char *s;
-    size_t len;
+    assert(n < 9);
+
+    char *s = str;
+    size_t len = strlen(s);
+
+    if (number == 0) { // 特例：0 直接返回 "0"
+        snprintf(s, maxlen, "0");
+        return;
+    }
 
     // 先处理负号
-    s = str;
     if (number < 0) {
         *s = '-';
         s++;
         maxlen--;
         number = -number;
     }
-
-    // 处理小数点
-    snprintf(s, maxlen, "%03" int64_f, number);
+    // 然后处理小数点
+    char fmt[8] = "";
+    snprintf(fmt, sizeof(fmt) - 1, "%c0%lu" int64_f, '%', n + 1);
+    snprintf(s, maxlen, fmt, number);
 
     len = strlen(s);
     // 小数点后两位向右平移
