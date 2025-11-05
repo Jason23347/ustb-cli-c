@@ -463,7 +463,13 @@ cmd_whoami(int argc, char **argv) {
         .len = strlen(nid),
         .cap = sizeof(nid),
     }};
-    gstr_t *nid_utf8 = decode_gb2312(nid_str);
+    size_t nid_buf_size = strlen(nid) * 3 / 2;
+    gstr_t nid_utf8[1] = {{
+        .s = alloca(nid_buf_size),
+        .len = 0,
+        .cap = nid_buf_size,
+    }};
+    decode_gb2312(nid_utf8, nid_str);
 
     if (config->mode == PRINT_UNAME) {
         printf("%s", username);
