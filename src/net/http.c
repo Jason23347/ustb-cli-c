@@ -131,7 +131,25 @@ http_readline(const http_t *http, char *buf, size_t maxlen) {
 
 ssize_t
 http_read(const http_t *http, void *buf, size_t len) {
-    return tcp_read(&http->conn, buf, len);
+    ssize_t total = 0;
+    char *p = buf;
+
+    while (total < len) {
+        ssize_t n = tcp_read(&http->conn, p + total, len - total);
+        if (n < 0) {
+            if (total == 0) {
+                return n;
+            } else {
+                break;
+            }
+        }
+        if (n == 0) {
+            break;
+        }
+        total += n;
+    }
+
+    return total;
 }
 
 ssize_t
