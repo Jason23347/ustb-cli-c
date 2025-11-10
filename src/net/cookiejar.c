@@ -21,10 +21,10 @@ cookiejar_init(size_t maxlen) {
         return NULL;
     }
 
-    cookiejar->str->s = buf;
+    cookiejar->str->data = buf;
     cookiejar->str->len = 0;
     cookiejar->str->cap = maxlen;
-    cookiejar->str->s[0] = '\0';
+    cookiejar->str->data[0] = '\0';
 
     return cookiejar;
 }
@@ -113,7 +113,7 @@ cookiejar_resolve(cookiejar_t *cookiejar, const char **headers, size_t count) {
 const char *
 cookiejar_str(const cookiejar_t *cookiejar) {
     if (cookiejar != NULL) {
-        return cookiejar->str->s;
+        return cookiejar->str->data;
     } else {
         return NULL;
     }

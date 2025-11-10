@@ -5,6 +5,8 @@
 #include "http.h"
 #include "tcp.h"
 
+#include "lib/gbuff.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +66,7 @@ http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data,
     gstr_t req[1] = {gstr_alloca(req_len)};
     /* Method & path */
     gstr_appendf(req, "%s %s HTTP/1.1\r\n", (data == NULL ? "GET" : "POST"),
-                 path->s);
+                 path->data);
     /* Cookie */
     if ((cookiejar != NULL) && (cookie_len > 0)) {
         gstr_appendf(req, "Cookie: %s\r\n", cookiejar_str(cookiejar));
@@ -86,11 +88,11 @@ http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data,
 
     /* Post data */
     if (data != NULL) {
-        gstr_appendf(req, "%s\r\n\r\n", data->s);
+        gstr_appendf(req, "%s\r\n\r\n", data->data);
     }
 
     size_t len = req->len;
-    if (http_write(http, req->s, len) != len) {
+    if (http_write(http, req->data, len) != len) {
         return -1;
     }
 
@@ -253,84 +255,78 @@ header_content_length(const char **headers, size_t count) {
 
 static char *
 http_body(http_t *http, const char **headers, size_t headers_count) {
-    size_t len;
-    char *body;
+    gbuff_t trunk[1], body[1];
 
     if (http_is_truncked(headers, headers_count)) {
-        size_t used = 0;
-        size_t trunk_len = MAX_TRUNK_SIZE;
-        char *trunk = malloc(MAX_TRUNK_SIZE);
-        if (trunk == NULL) {
+        if (gbuff_init(trunk, MAX_TRUNK_SIZE) != 0) {
+            return NULL;
+        }
+        if (gbuff_init(body, MAX_TRUNK_SIZE) != 0) {
+            gbuff_free(trunk);
             return NULL;
         }
 
-        size_t maxlen = MAX_TRUNK_SIZE;
-        body = malloc(maxlen);
-        if (body == NULL) {
-            return NULL;
-        }
-
-        char *p = body;
         while (1) {
-            len = http_readline(http, trunk, trunk_len);
-            if (len <= 0) {
-                return NULL;
+            ssize_t n = http_readline(http, trunk->data, trunk->cap);
+            if (n <= 0) {
+                goto fail;
             }
-            len = strtoul(trunk, NULL, 16);
-            if (len == 0) {
-                body[used] = '\0';
-                return body;
-            } else {
-                if (len > trunk_len) {
-                    char *tmp = realloc(trunk, len + 1);
-                    if (tmp == NULL) {
-                        body[used] = '\0';
-                        return body;
-                    }
-                    trunk_len = len;
-                    trunk = tmp;
-                }
-                if (http_read(http, trunk, len) != len) {
-                    return NULL;
-                }
-                if (used + len >= maxlen) {
-                    while (used + len >= maxlen) {
-                        maxlen *= 2;
-                    }
-                    char *tmp = realloc(body, maxlen);
-                    if (tmp == NULL) {
-                        body[used] = '\0';
-                        return body;
-                    }
-                    body = tmp;
-                    p = body + used;
-                }
-                memcpy(p, trunk, len);
-                p += len;
-                used += len;
+
+            size_t chunk_len = strtoul(trunk->data, NULL, 16);
+            if (chunk_len == 0) {
+                // 跳过最后空行
+                http_readline(http, trunk->data, trunk->cap);
+                gbuff_free(trunk);
+                gbuff_appendf(body, "", 1); // null-terminate
+                return body->data;
             }
+
+            /* Read into trunk */
+            if (gbuff_ensure(trunk, chunk_len + 2) != 0) {
+                goto fail;
+            }
+            if (http_read(http, trunk->data, chunk_len) != chunk_len) {
+                goto fail;
+            }
+
+            /* Copy trunk into body */
+            if (gbuff_ensure(body, body->len + chunk_len + 1) != 0) {
+                goto fail;
+            }
+
+            if (gbuff_put(body, trunk->data, chunk_len) < 0) {
+                goto fail;
+            }
+
+            // skip \r\n
+            n = http_readline(http, trunk->data, trunk->cap);
+            assert(n == 2);
         }
 
-        // FIXME
+    fail:
+        gbuff_free(trunk);
+        gbuff_free(body);
         return NULL;
     } else {
-        /* 取content-length */
-        len = header_content_length(headers, headers_count);
-        body = malloc(len + 1);
-        if (body == NULL) {
+        size_t len = header_content_length(headers, headers_count);
+        if (gbuff_init(body, len + 1) != 0)
+            return NULL;
+
+        if (http_read(http, body->data, len) != len) {
+            gbuff_free(body);
             return NULL;
         }
-        http_read(http, body, len);
-        body[len] = '\0';
-    }
 
-    return body;
+        body->len = len;
+        body->data[len] = '\0';
+        return body->data;
+    }
 }
 
 char *
 http_request(http_t *http, const gstr_t *path, const gstr_t *data,
              cookiejar_t *cookiejar) {
-    assert(path->s[0] == '/');
+    assert(path->data[0] == '/');
 
     char *body = NULL;
 

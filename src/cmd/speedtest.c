@@ -250,7 +250,17 @@ http_get_flow(http_t *http, uint64_t *flow) {
         return -1;
     }
 
-    extract(flow, content, uint64_spec, "flow", 1);
+    const struct extract ext[1] = {{
+        .dest = &flow,
+        .src = content,
+        .fmt = &gstr_from_const(uint64_spec),
+        .prefix = &gstr_from_const("flow"),
+        .quoted = EXT_QUOTED,
+    }};
+    res = gstr_extract(ext);
+    if (res < 0) {
+        return -1;
+    }
 
     free(content);
 

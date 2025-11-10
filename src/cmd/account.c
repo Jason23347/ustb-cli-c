@@ -235,7 +235,7 @@ login_url_path(const login_t *config, gstr_t *str) {
     }
 
     gstr_appendf(str, LOGIN_PATH "?callback=a&DDDDD=%s&upass=%s&0MKKey=123456",
-                 account->username->s, account->password->s);
+                 account->username->data, account->password->data);
     if (config->use_ipv6) {
         char ipv6_encoded[URLENCODED_IPV6_MAX_LEN];
         ipv6_urlencode(ipv6_encoded, config->ipv6_addr, sizeof(ipv6_encoded));
@@ -304,7 +304,6 @@ login_get_config(login_t *config, int argc, char **argv) {
 static int
 ipv6_get(char *ipv6_addr, size_t maxlen) {
     http_t *http = http_init(CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
-
     const char *content = http_get(http, &gstr_from_const(CIPPV6_PATH));
     if (content == NULL) {
         // failed to get ipv6
@@ -357,7 +356,7 @@ cmd_login(int argc, char **argv) {
         if (res != 0) {
             return -1;
         }
-        config->env_filepath = home_str->s;
+        config->env_filepath = home_str->data;
     }
 
     // Get IPV6 address
@@ -447,25 +446,49 @@ cmd_whoami(int argc, char **argv) {
     }
 
     char username[MAX_VAR_LEN] = {0};
-    res = extract(username, content, "%[^'\"]s", "uid", 1);
+    {
+        const struct extract ext[1] = {{
+            .dest = username,
+            .src = content,
+            .fmt = &gstr_from_const("%[^'\"]s"),
+            .prefix = &gstr_from_const("uid"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
     if (res < 0) {
         return EXIT_FAILURE;
     }
     char nid[MAX_VAR_LEN] = {0};
-    res = extract(nid, content, "%[^'\"]s", "NID", 1);
+    {
+        const struct extract ext[1] = {{
+            .dest = username,
+            .src = content,
+            .fmt = &gstr_from_const("%[^'\"]s"),
+            .prefix = &gstr_from_const("NID"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
     if (res < 0) {
         return EXIT_FAILURE;
     }
 
     /* GBK → UTF-8 */
     gstr_t nid_str[1] = {{
-        .s = nid,
+        .data = nid,
         .len = strlen(nid),
         .cap = sizeof(nid),
     }};
     size_t nid_buf_size = strlen(nid) * 3 / 2;
     gstr_t nid_utf8[1] = {{
-        .s = alloca(nid_buf_size),
+        .data = alloca(nid_buf_size),
         .len = 0,
         .cap = nid_buf_size,
     }};
@@ -476,7 +499,7 @@ cmd_whoami(int argc, char **argv) {
     } else if (config->mode == PRINT_NID) {
         printf("%s", nid);
     } else if (config->mode == PRINT_ALL) {
-        printf("%s (%s)\n", username, nid_utf8->s);
+        printf("%s (%s)\n", username, nid_utf8->data);
     } else {
         return EXIT_FAILURE;
     }
@@ -487,25 +510,51 @@ cmd_whoami(int argc, char **argv) {
 int
 device_get_form(device_form_t *form, http_t *http, cookiejar_t *cookiejar,
                 const account_t *account) {
+    int res;
+
     char *content =
         http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL, cookiejar);
 
-    extract(form->checkcode, content, "%[^'\"]", "checkcode", 1);
+    {
+        const struct extract ext[1] = {{
+            .dest = form->checkcode,
+            .src = content,
+            .fmt = &gstr_from_const("%[^'\"]"),
+            .prefix = &gstr_from_const("checkcode"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
 
-    char buf[MAX_VAR_LEN];
-    extract(buf, content, "%[^'\"]", "trytimes", 1);
-    if (strcmp(buf, "null") == 0) {
-        form->trytimes = 0;
-    } else { /* 假设 trytimes < 10 */
-        form->trytimes = buf[0] - '0';
+    {
+        char buf[MAX_VAR_LEN];
+        const struct extract ext[1] = {{
+            .dest = buf,
+            .src = content,
+            .fmt = &gstr_from_const("%[^'\"]"),
+            .prefix = &gstr_from_const("trytimes"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            form->trytimes = 0;
+        }
+        if (strcmp(buf, "null") == 0) {
+            form->trytimes = 0;
+        } else { /* 假设 trytimes < 10 */
+            form->trytimes = buf[0] - '0';
+        }
     }
 
     if (form->trytimes >= 3) {
         return -1;
     }
 
-    form->account = account->username->s;
-    md5(form->pw_hash, account->password->s);
+    form->account = account->username->data;
+    md5(form->pw_hash, account->password->data);
     /* 登[空格]录 */
     form->submit = "\%E7\%99\%BB+\%E5\%BD\%95";
 
@@ -521,7 +570,7 @@ step_in(const char *p, const char *tag_name) {
     gstr_appendf(tag, "%c%s", br_left, tag_name);
 
     /* <tag_name ...> */
-    pos = strstr(p, tag->s);
+    pos = strstr(p, tag->data);
     if (pos == NULL) {
         return NULL;
     }
@@ -538,7 +587,7 @@ step_out(const char *p, const char *tag_name) {
     gstr_appendf(tag, "%c/%s%c", br_left, tag_name, br_right);
 
     /* </tag_name ...> */
-    pos = strstr(p, tag->s);
+    pos = strstr(p, tag->data);
     if (pos == NULL) {
         return NULL;
     }
@@ -849,7 +898,7 @@ cmd_devices(int argc, char **argv) {
         if (res != 0) {
             return EXIT_FAILURE;
         }
-        config->env_filepath = home_str->s;
+        config->env_filepath = home_str->data;
     }
 
     // Get username & password

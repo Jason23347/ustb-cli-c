@@ -37,28 +37,92 @@ int
 info_fetch(info_t *info, const char *content) {
     int res;
 
-    res = extract(&info->curr_flow, content, uint64_spec, "flow", 1);
-    if (res < 0) {
-        return -1;
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->curr_flow,
+            .src = content,
+            .fmt = &gstr_from_const(uint64_spec),
+            .prefix = &gstr_from_const("flow"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
     }
-    res = extract(&info->curr_flow_v6, content, uint64_spec, "v6df", 0);
-    if (res < 0) {
-        return -1;
+
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->curr_flow_v6,
+            .src = content,
+            .fmt = &gstr_from_const(uint64_spec),
+            .prefix = &gstr_from_const("v6df"),
+            .quoted = EXT_UNQUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
     }
-    res = extract(&info->ipv6_mode, content, "%u", "v46m", 0);
-    if (res < 0) {
-        return -1;
+
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->ipv6_mode,
+            .src = content,
+            .fmt = &gstr_from_const("%u"),
+            .prefix = &gstr_from_const("v46m"),
+            .quoted = EXT_UNQUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
     }
-    res = extract(&info->fee, content, "%u", "fee", 1);
-    if (res < 0) {
-        return -1;
+
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->fee,
+            .src = content,
+            .fmt = &gstr_from_const("%u"),
+            .prefix = &gstr_from_const("fee"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
     }
 
     /* FIXME: Don't know why */
     info->curr_flow_v6 /= 4;
 
-    extract(&info->ipv4_addr, content, "%15[^']", "v4ip", 1);
-    extract(&info->ipv6_addr, content, "%39[^']", "v6ip", 1);
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->ipv4_addr,
+            .src = content,
+            .fmt = &gstr_from_const("%15[^']"),
+            .prefix = &gstr_from_const("v4ip"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
+
+    {
+        const struct extract ext[1] = {{
+            .dest = &info->ipv6_addr,
+            .src = content,
+            .fmt = &gstr_from_const("%39[^']"),
+            .prefix = &gstr_from_const("v6ip"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
 
     return 0;
 }
@@ -140,6 +204,7 @@ cmd_info(int argc, char **argv) {
 
 int
 cmd_fee(int argc, char **argv) {
+    int res;
     int c;
     uint64_t curr_flow;
     uint64_t fee_num;
@@ -165,8 +230,33 @@ cmd_fee(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    extract(&curr_flow, p, uint64_spec, "flow", 1);
-    extract(&fee_num, p, uint64_spec, "fee", 1);
+    {
+        const struct extract ext[1] = {{
+            .dest = &curr_flow,
+            .src = content,
+            .fmt = &gstr_from_const(uint64_spec),
+            .prefix = &gstr_from_const("flow"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
+
+    {
+        const struct extract ext[1] = {{
+            .dest = &fee_num,
+            .src = content,
+            .fmt = &gstr_from_const("%u"),
+            .prefix = &gstr_from_const("fee"),
+            .quoted = EXT_QUOTED,
+        }};
+        res = gstr_extract(ext);
+        if (res < 0) {
+            return -1;
+        }
+    }
 
     uint64_t over = flow_over(curr_flow);
     if (over <= 0) {

@@ -5,14 +5,15 @@
 #ifdef USE_ICONV
 
 #include <iconv.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 int
 decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
     size_t in_bytes_left = gb_in->len;
     size_t out_bytes_left = utf8_out->cap;
-    char *inbuf = gb_in->s;
-    char *outbuf = utf8_out->s;
+    char *inbuf = gb_in->data;
+    char *outbuf = utf8_out->data;
 
     iconv_t cd = iconv_open("UTF-8", "GB2312");
     if (cd == (iconv_t)-1) {
