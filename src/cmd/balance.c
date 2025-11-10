@@ -8,6 +8,7 @@
 #include "net/http.h"
 #include "terminal.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
