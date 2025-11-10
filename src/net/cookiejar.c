@@ -135,3 +135,10 @@ cookiejar_length(const cookiejar_t *cookiejar) {
         return 0;
     }
 }
+
+void
+cookiejar_free(cookiejar_t *cookiejar) {
+    assert(cookiejar != NULL);
+    gbuff_free(cookiejar->str);
+    free(cookiejar);
+}

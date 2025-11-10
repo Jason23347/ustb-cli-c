@@ -44,5 +44,6 @@ int cookiejar_resolve(cookiejar_t *cookiejar, const char **headers,
                       size_t count);
 const char *cookiejar_str(const cookiejar_t *cookiejar);
 size_t cookiejar_length(const cookiejar_t *cookiejar);
+void cookiejar_free(cookiejar_t *cookiejar);
 
 #endif /* HTTP_H */

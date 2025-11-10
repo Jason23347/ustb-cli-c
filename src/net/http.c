@@ -55,6 +55,9 @@ http_init(const char *domain, uint16_t port, int http_mode) {
 
 void
 http_free(http_t *http) {
+    if (http->cookiejar) {
+        cookiejar_free(http->cookiejar);
+    }
     free(http);
 }
 
@@ -177,29 +180,6 @@ http_write(const http_t *http, void *buf, size_t len) {
 void
 http_close(const http_t *http) {
     tcp_close(&http->conn);
-}
-
-const char *
-http_header(const http_t *http, char *buf, const char *header) {
-    assert(header != NULL);
-
-    char *match;
-    char *p = buf;
-    size_t len = strlen(header);
-
-    while (1) {
-        match = strcasestr(p, header);
-        if (match != NULL) {
-            p = match + len;
-            if ((match <= buf) || (match[-1] == '\n')) {
-                return p;
-            }
-        } else {
-            return NULL;
-        }
-    }
-
-    return NULL;
 }
 
 size_t
