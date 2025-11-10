@@ -15,11 +15,17 @@ domain2addr(char *addr_str, const char *domain, size_t maxlen, int ip_mode) {
     int af;
     struct addrinfo *res;
 
-    if (ip_mode == IPV4_ONLY) {
+    int use_ipv4 = ((ip_mode & IPV4_ONLY) != 0);
+    int use_ipv6 = ((ip_mode & IPV6_ONLY) != 0);
+
+    if (use_ipv4 && use_ipv6) {
+        af = AF_UNSPEC;
+    } else if (use_ipv4 && (!use_ipv6)) {
         af = AF_INET;
-    } else if (ip_mode == IPV6_ONLY) {
+    } else if ((!use_ipv4) && use_ipv6) {
         af = AF_INET6;
     } else {
+        /* Should output some warnings */
         af = AF_UNSPEC;
     }
 

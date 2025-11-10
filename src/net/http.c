@@ -11,28 +11,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_BUF_SIZE   4096
-#define MAX_TRUNK_SIZE 64
+#define MAX_BUF_SIZE       4096
+#define MAX_TRUNK_SIZE     64
+#define MAX_COOKIEJAR_SIZE 128
 
 typedef struct http {
     const char *domain;
     tcp_t conn;
-    int ip_mode;
+    int http_mode;
     uint16_t port;
+    cookiejar_t *cookiejar;
 } http_t;
 
 http_t *
-http_init(const char *domain, uint16_t port, int ip_mode) {
+http_init(const char *domain, uint16_t port, int http_mode) {
     http_t *http = malloc(sizeof(http_t));
+    if (http == NULL) {
+        return NULL;
+    }
+
     *http = (http_t){
         .domain = domain,
         .port = port,
-        .ip_mode = ip_mode,
+        .http_mode = http_mode,
         .conn =
             {
                 .fd = INVALID_SOCKET,
             },
+        .cookiejar = NULL,
     };
+
+    if ((http_mode & HTTP_COOKIEJAR) != 0) {
+        cookiejar_t *cookiejar = cookiejar_init(MAX_COOKIEJAR_SIZE);
+        if (cookiejar == NULL) {
+            free(http);
+            return NULL;
+        }
+        http->cookiejar = cookiejar;
+    }
 
     return http;
 }
@@ -44,7 +60,8 @@ http_free(http_t *http) {
 
 int
 http_connect(http_t *http) {
-    int res = tcp_connect(&http->conn, http->domain, http->port, http->ip_mode);
+    int res =
+        tcp_connect(&http->conn, http->domain, http->port, http->http_mode);
     if (res != 0) {
         return -1;
     }
@@ -53,9 +70,9 @@ http_connect(http_t *http) {
 }
 
 int
-http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data,
-                  const cookiejar_t *cookiejar) {
+http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data) {
     size_t req_len = path->len + 33 + strlen(http->domain);
+    const cookiejar_t *cookiejar = http->cookiejar;
     size_t cookie_len = cookiejar_length(cookiejar);
     if ((cookiejar != NULL) && (cookie_len > 0)) {
         req_len += cookie_len + 10;
@@ -239,7 +256,7 @@ http_find_header(const char **headers, const char *header, size_t count) {
 }
 
 int
-http_is_truncked(const char **headers, size_t count) {
+http_is_chuncked(const char **headers, size_t count) {
     const char transfer_encoding[] = "transfer-encoding:";
     const char *header_value =
         http_find_header(headers, transfer_encoding, count);
@@ -275,7 +292,7 @@ static char *
 http_body(http_t *http, const char **headers, size_t headers_count) {
     gbuff_t trunk[1], body[1];
 
-    if (http_is_truncked(headers, headers_count)) {
+    if (http_is_chuncked(headers, headers_count)) {
         if (gbuff_init(trunk, MAX_TRUNK_SIZE) != 0) {
             return NULL;
         }
@@ -295,7 +312,7 @@ http_body(http_t *http, const char **headers, size_t headers_count) {
                 // 跳过最后空行
                 http_readline(http, trunk->data, trunk->cap);
                 gbuff_free(trunk);
-                gbuff_appendf(body, "", 1); // null-terminate
+                gbuff_appendf(body, ""); // null-terminate
                 return body->data;
             }
 
@@ -327,10 +344,12 @@ http_body(http_t *http, const char **headers, size_t headers_count) {
         return NULL;
     } else {
         size_t len = header_content_length(headers, headers_count);
-        if (gbuff_init(body, len + 1) != 0)
+        if (gbuff_init(body, len + 1) != 0) {
             return NULL;
+        }
 
-        if (http_read(http, body->data, len) != len) {
+        ssize_t res = http_read(http, body->data, len);
+        if (res != len) {
             gbuff_free(body);
             return NULL;
         }
@@ -342,11 +361,11 @@ http_body(http_t *http, const char **headers, size_t headers_count) {
 }
 
 char *
-http_request(http_t *http, const gstr_t *path, const gstr_t *data,
-             cookiejar_t *cookiejar) {
+http_request(http_t *http, const gstr_t *path, const gstr_t *data) {
     assert(path->data[0] == '/');
 
     char *body = NULL;
+    cookiejar_t *cookiejar = http->cookiejar;
 
     /* TCP connect */
     int res = http_connect(http);
@@ -354,7 +373,7 @@ http_request(http_t *http, const gstr_t *path, const gstr_t *data,
         return NULL;
     }
     /* Send request */
-    res = http_send_request(http, path, data, cookiejar);
+    res = http_send_request(http, path, data);
     if (res != 0) {
         return NULL;
     }

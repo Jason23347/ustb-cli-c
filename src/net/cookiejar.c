@@ -6,36 +6,44 @@
 
 struct cookiejar {
     gstr_t str[1];
+    int count;
 };
 
 cookiejar_t *
 cookiejar_init(size_t maxlen) {
-    char *buf = malloc(maxlen);
-    if (buf == NULL) {
-        return NULL;
-    }
-
-    cookiejar_t *cookiejar = malloc(sizeof(cookiejar_t));
+    /* Allocate cookiejar */
+    cookiejar_t *cookiejar;
+    cookiejar = malloc(sizeof(cookiejar_t));
     if (cookiejar == NULL) {
-        free(buf);
         return NULL;
     }
-
-    cookiejar->str->data = buf;
-    cookiejar->str->len = 0;
-    cookiejar->str->cap = maxlen;
-    cookiejar->str->data[0] = '\0';
+    /* Allocate gstr buffer */
+    gstr_t *str = cookiejar->str;
+    if (gbuff_init(str, maxlen) != 0) {
+        free(cookiejar);
+        return NULL;
+    }
 
     return cookiejar;
 }
 
 int
 cookiejar_add(cookiejar_t *cookiejar, const char *key, const char *value) {
-    if (cookiejar->str->len == 0) {
-        return gstr_appendf(cookiejar->str, "%s=%s", key, value);
+    int res;
+    gstr_t *str = cookiejar->str;
+    /* Ensure can append */
+    size_t append_len = strlen(key) + strlen(value) + 4;
+    gbuff_ensure(str, str->len + append_len);
+
+    if (cookiejar->count <= 0) {
+        res = gstr_appendf(str, "%s=%s", key, value);
     } else {
-        return gstr_appendf(cookiejar->str, "; %s=%s", key, value);
+        res = gstr_appendf(str, "; %s=%s", key, value);
     }
+
+    cookiejar->count++;
+
+    return res;
 }
 
 static void

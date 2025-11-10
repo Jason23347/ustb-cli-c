@@ -120,7 +120,7 @@ speedtest_download(const speedtest_t *config) {
                  config->filesizeMB);
 
     http_connect(http);
-    http_send_request(http, str, NULL, NULL);
+    http_send_request(http, str, NULL);
     http_section(http, buf, sizeof(buf));
 
     total = config->filesizeMB * ((MB * 1024) / sizeof(buf));

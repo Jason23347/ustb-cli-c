@@ -6,10 +6,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#define IPV4_IPV6  0
-#define IPV4_ONLY  1
-#define IPV6_ONLY  2
-#define IP_DEFAULT IPV4_IPV6
+#define IPV4_ONLY 1
+#define IPV6_ONLY 2
+#define IPV4_IPV6 (IPV4_ONLY | IPV6_ONLY)
 
 typedef struct {
     SOCKET fd;

@@ -508,12 +508,10 @@ cmd_whoami(int argc, char **argv) {
 }
 
 int
-device_get_form(device_form_t *form, http_t *http, cookiejar_t *cookiejar,
-                const account_t *account) {
+device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     int res;
 
-    char *content =
-        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL, cookiejar);
+    char *content = http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
 
     {
         const struct extract ext[1] = {{
@@ -745,22 +743,20 @@ devices_get_config(device_t *config, int argc, char **argv) {
 }
 
 int
-devices_login(http_t *http, cookiejar_t *cookiejar, const account_t *account) {
+devices_login(http_t *http, const account_t *account) {
     char *content;
     device_form_t form[1];
 
     // 1. Get checkcode & trytime
-    content =
-        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL, cookiejar);
+    content = http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
     if (content == NULL) {
         return -1;
     }
-    device_get_form(form, http, cookiejar, account);
+    device_get_form(form, http, account);
     free(content);
 
     // 2. Get random code (never use)
-    content = http_request(http, &gstr_from_const(DRCOM_RANDOMCODE_PATH), NULL,
-                           cookiejar);
+    content = http_request(http, &gstr_from_const(DRCOM_RANDOMCODE_PATH), NULL);
     if (content == NULL) {
         return -1;
     }
@@ -770,21 +766,18 @@ devices_login(http_t *http, cookiejar_t *cookiejar, const account_t *account) {
     gstr_t data[1] = {gstr_alloca(MAX_PATH_LEN)};
     gstr_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
                  form->account, form->pw_hash, form->checkcode, form->submit);
-    content =
-        http_request(http, &gstr_from_const(DRCOM_LOGIN_PATH), data, cookiejar);
+    content = http_request(http, &gstr_from_const(DRCOM_LOGIN_PATH), data);
     free(content);
 
     return 0;
 }
 
 int
-devices_check_online(device_info_t *devices, http_t *http,
-                     cookiejar_t *cookiejar, size_t maxlen) {
+devices_check_online(device_info_t *devices, http_t *http, size_t maxlen) {
     char *content;
 
     // 4. Check online devices
-    content = http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL,
-                           cookiejar);
+    content = http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL);
     int device_count = devices_parse(devices, content, maxlen);
     free(content);
     if (device_count == -1) {
@@ -883,7 +876,6 @@ cmd_devices(int argc, char **argv) {
 
     char *content;
     http_t *http;
-    cookiejar_t *cookiejar = cookiejar_init(MAX_LINE_LEN);
 
     res = devices_get_config(config, argc, argv);
     if (res != 0) {
@@ -908,10 +900,10 @@ cmd_devices(int argc, char **argv) {
     }
 
     // Init HTTP
-    http = http_init(DRCOM_HOST, DRCOM_PORT, IPV4_ONLY);
+    http = http_init(DRCOM_HOST, DRCOM_PORT, IPV4_ONLY | HTTP_COOKIEJAR);
 
     // Perform login
-    res = devices_login(http, cookiejar, account);
+    res = devices_login(http, account);
     if (res != 0) {
         return EXIT_FAILURE;
     }
@@ -919,7 +911,7 @@ cmd_devices(int argc, char **argv) {
     do {
         // Fetch online devices
         int device_count =
-            devices_check_online(devices, http, cookiejar, max_online_count);
+            devices_check_online(devices, http, max_online_count);
         // Output
         devices_output(config, devices, device_count);
 
