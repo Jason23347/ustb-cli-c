@@ -13,7 +13,7 @@ cookiejar_t *
 cookiejar_init(size_t maxlen) {
     /* Allocate cookiejar */
     cookiejar_t *cookiejar;
-    cookiejar = malloc(sizeof(cookiejar_t));
+    cookiejar = calloc(sizeof(cookiejar_t), 1);
     if (cookiejar == NULL) {
         return NULL;
     }
