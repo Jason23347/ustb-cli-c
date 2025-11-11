@@ -40,9 +40,9 @@ typedef struct {
 int gbuff_init(gbuff_t *buff, size_t size);
 int gbuff_ensure(gbuff_t *buff, size_t size);
 int gbuff_realloc(gbuff_t *buff, size_t size);
-void gbuff_free(gbuff_t *b);
-void gbuff_clear(gbuff_t *b);
-ssize_t gbuff_put(gbuff_t *b, const void *src, size_t n);
-int gbuff_appendf(gbuff_t *b, const char *fmt, ...);
+void gbuff_free(gbuff_t *buff);
+void gbuff_clear(gbuff_t *buff);
+ssize_t gbuff_put(gbuff_t *buff, const void *src, size_t n);
+int gbuff_appendf(gbuff_t *buff, const char *fmt, ...);
 
 #endif /* LIB_GBUFF_H */
