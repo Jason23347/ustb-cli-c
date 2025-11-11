@@ -303,7 +303,13 @@ login_get_config(login_t *config, int argc, char **argv) {
 
 static int
 ipv6_get(char *ipv6_addr, size_t maxlen) {
-    http_t *http = http_init(CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
+    int res;
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
+    if (res != 0) {
+        return -1;
+    }
+
     const char *content = http_get(http, &gstr_from_const(CIPPV6_PATH));
     if (content == NULL) {
         // failed to get ipv6
@@ -319,7 +325,11 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
 
 static int
 login_request(const gstr_t *path) {
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    http_t *http = alloca(HTTP_T_SIZE);
+    int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return -1;
+    }
 
     const char *content = http_get(http, path);
     if (content == NULL) {
@@ -391,7 +401,11 @@ cmd_login(int argc, char **argv) {
 
 int
 cmd_logout(int argc, char **argv) {
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    http_t *http = alloca(HTTP_T_SIZE);
+    int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     const char *content = http_get(http, &gstr_from_const("/F.htm"));
     if (content == NULL) {
@@ -438,7 +452,11 @@ cmd_whoami(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     const char *content = http_get_root(http);
     if (content == NULL) {
@@ -511,7 +529,8 @@ int
 device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     int res;
 
-    char *content = http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
+    const char *content =
+        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
 
     {
         const struct extract ext[1] = {{
@@ -744,7 +763,7 @@ devices_get_config(device_t *config, int argc, char **argv) {
 
 int
 devices_login(http_t *http, const account_t *account) {
-    char *content;
+    const char *content;
     device_form_t form[1];
 
     // 1. Get checkcode & trytime
@@ -753,33 +772,27 @@ devices_login(http_t *http, const account_t *account) {
         return -1;
     }
     device_get_form(form, http, account);
-    free(content);
 
     // 2. Get random code (never use)
     content = http_request(http, &gstr_from_const(DRCOM_RANDOMCODE_PATH), NULL);
     if (content == NULL) {
         return -1;
     }
-    free(content);
 
     // 3. login request
     gstr_t data[1] = {gstr_alloca(MAX_PATH_LEN)};
     gstr_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
                  form->account, form->pw_hash, form->checkcode, form->submit);
     content = http_request(http, &gstr_from_const(DRCOM_LOGIN_PATH), data);
-    free(content);
 
     return 0;
 }
 
 int
 devices_check_online(device_info_t *devices, http_t *http, size_t maxlen) {
-    char *content;
-
-    // 4. Check online devices
-    content = http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL);
+    const char *content =
+        http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL);
     int device_count = devices_parse(devices, content, maxlen);
-    free(content);
     if (device_count == -1) {
         /* Maybe login failed */
         return -1;
@@ -874,9 +887,6 @@ cmd_devices(int argc, char **argv) {
     device_info_t devices[MAX_ONLINE_DEVICE_COUNT];
     size_t max_online_count = sizeof(devices) / sizeof(devices[0]);
 
-    char *content;
-    http_t *http;
-
     res = devices_get_config(config, argc, argv);
     if (res != 0) {
         return EXIT_FAILURE;
@@ -900,7 +910,11 @@ cmd_devices(int argc, char **argv) {
     }
 
     // Init HTTP
-    http = http_init(DRCOM_HOST, DRCOM_PORT, IPV4_ONLY | HTTP_COOKIEJAR);
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, DRCOM_HOST, DRCOM_PORT, IPV4_ONLY | HTTP_COOKIEJAR);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     // Perform login
     res = devices_login(http, account);

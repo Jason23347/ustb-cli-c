@@ -11,9 +11,11 @@
 typedef struct http http_t;
 typedef struct cookiejar cookiejar_t;
 
-http_t *http_init(const char *domain, uint16_t port, int http_mode);
+extern const size_t HTTP_T_SIZE;
+
+int http_init(http_t *http, const char *domain, uint16_t port, int http_mode);
 /* Returns allocated body if success, else NULL */
-char *http_request(http_t *http, const gstr_t *path, const gstr_t *data);
+const char *http_request(http_t *http, const gstr_t *path, const gstr_t *data);
 void http_free(http_t *http);
 
 int http_connect(http_t *http);
@@ -25,15 +27,12 @@ void http_close(const http_t *http);
 
 size_t http_readline(const http_t *http, char *buf, size_t maxlen);
 size_t http_section(const http_t *http, char *buf, size_t maxlen);
-void http_headers(const char **headers, char *raw_text, size_t count);
-const char *http_find_header(const char **headers, const char *header,
-                             size_t count);
 
-static inline char *
+static inline const char *
 http_get(http_t *http, const gstr_t *path) {
     return http_request(http, path, NULL);
 }
-static inline char *
+static inline const char *
 http_get_root(http_t *http) {
     return http_get(http, &gstr_from_const("/"));
 }

@@ -112,7 +112,11 @@ speedtest_download(const speedtest_t *config) {
     char buf[MAX_BUF_SIZE];
     struct timeval start, end;
 
-    http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
+    http_t *http = alloca(HTTP_T_SIZE);
+    int res = http_init(http, SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
+    if (res != 0) {
+        return 0;
+    }
 
     gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
     r = random_d();
@@ -159,7 +163,11 @@ speedtest_upload(const speedtest_t *config) {
     char buf[MAX_BUF_SIZE];
     struct timeval start, end;
 
-    http_t *http = http_init(SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
+    http_t *http = alloca(HTTP_T_SIZE);
+    int res = http_init(http, SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6);
+    if (res != 0) {
+        return 0;
+    }
 
     gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
     r = random_d();
@@ -245,7 +253,7 @@ http_get_flow(http_t *http, uint64_t *flow) {
 
     int res;
 
-    char *content = http_get_root(http);
+   const char *content = http_get_root(http);
     if (content == NULL) {
         return -1;
     }
@@ -262,8 +270,6 @@ http_get_flow(http_t *http, uint64_t *flow) {
         return -1;
     }
 
-    free(content);
-
     return 0;
 }
 
@@ -274,10 +280,14 @@ cmd_monitor(int argc, char **argv) {
     uint64_t download, speed;
     flow_history_t history[1] = {0};
 
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
+
     for (; 1; sleep_till_next_sec()) {
-        http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
         res = http_get_flow(http, &download);
-        http_free(http);
         if (res != 0) {
             set_color(RED);
             printf("ERROR");
@@ -291,7 +301,6 @@ cmd_monitor(int argc, char **argv) {
         flow_format_speed(speed, flow_str, sizeof(flow_str), 0);
 
         /* TODO 下载量 & 下载速度，提供参数显示/隐藏 */
-
         clear_line();
         printf("  Download speed: "
                "[");

@@ -15,42 +15,57 @@
 #define MAX_TRUNK_SIZE     64
 #define MAX_COOKIEJAR_SIZE 128
 
+typedef struct http_headers {
+    const char **list;
+    int count;
+} http_headers_t;
+
 typedef struct http {
+    // Settings
     const char *domain;
-    tcp_t conn;
-    int http_mode;
     uint16_t port;
+    int http_mode;
+
+    tcp_t conn;
     cookiejar_t *cookiejar;
+
+    // Results
+    int status_code;
+    http_headers_t headers[1];
+    gstr_t body[1];
 } http_t;
 
-http_t *
-http_init(const char *domain, uint16_t port, int http_mode) {
-    http_t *http = malloc(sizeof(http_t));
-    if (http == NULL) {
-        return NULL;
-    }
+const size_t HTTP_T_SIZE = sizeof(struct http);
 
-    *http = (http_t){
-        .domain = domain,
-        .port = port,
-        .http_mode = http_mode,
-        .conn =
-            {
-                .fd = INVALID_SOCKET,
-            },
-        .cookiejar = NULL,
-    };
+int
+http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
+    memset(http, 0, HTTP_T_SIZE);
+
+    http->domain = domain;
+    http->port = port;
+    http->http_mode = http_mode;
+
+    http->conn = (tcp_t){INVALID_SOCKET};
 
     if ((http_mode & HTTP_COOKIEJAR) != 0) {
         cookiejar_t *cookiejar = cookiejar_init(MAX_COOKIEJAR_SIZE);
         if (cookiejar == NULL) {
-            free(http);
-            return NULL;
+            goto fail;
         }
         http->cookiejar = cookiejar;
+    } else {
+        http->cookiejar = NULL;
     }
 
-    return http;
+    if (gbuff_init(http->body, MAX_BUF_SIZE) != 0) {
+        goto fail;
+    }
+
+    return 0;
+
+fail:
+    free(http);
+    return -1;
 }
 
 void
@@ -202,11 +217,15 @@ http_section(const http_t *http, char *buf, size_t maxlen) {
 }
 
 void
-http_headers(const char **headers, char *raw_text, size_t count) {
-    size_t i = 0;
+http_headers(const http_t *http, char *header_section) {
     const char crlf[] = "\r\n";
-    char *p = raw_text;
+    char *p = header_section;
+    const char **headers = http->headers->list;
+    int count = http->headers->count;
+
     /* Skip 1st line "HTTP/1.1 200 ok" */
+    // TODO get status from 1st line
+    size_t i = 0;
     do {
         p = strstr(p, crlf);
         if (p == NULL) {
@@ -220,8 +239,11 @@ http_headers(const char **headers, char *raw_text, size_t count) {
 }
 
 const char *
-http_find_header(const char **headers, const char *header, size_t count) {
+http_find_header(const http_t *http, const char *header) {
     size_t hlen = strlen(header);
+
+    const char **headers = http->headers->list;
+    int count = http->headers->count;
 
     assert(header[hlen - 1] == ':');
 
@@ -236,10 +258,11 @@ http_find_header(const char **headers, const char *header, size_t count) {
 }
 
 int
-http_is_chuncked(const char **headers, size_t count) {
+http_is_chuncked(const http_t *http) {
+    const char **headers = http->headers->list;
+
     const char transfer_encoding[] = "transfer-encoding:";
-    const char *header_value =
-        http_find_header(headers, transfer_encoding, count);
+    const char *header_value = http_find_header(http, transfer_encoding);
 
     if (!header_value) {
         return 0;
@@ -257,9 +280,9 @@ http_is_chuncked(const char **headers, size_t count) {
 }
 
 size_t
-header_content_length(const char **headers, size_t count) {
+header_content_length(const http_t *http) {
     const char content_length[] = "content-length:";
-    const char *slen = http_find_header(headers, content_length, count);
+    const char *slen = http_find_header(http, content_length);
 
     if (slen == NULL) {
         return 0;
@@ -268,84 +291,92 @@ header_content_length(const char **headers, size_t count) {
     return atol(slen);
 }
 
-static char *
-http_body(http_t *http, const char **headers, size_t headers_count) {
-    gbuff_t trunk[1], body[1];
+static int
+http_chuncked_body(http_t *http) {
+    gbuff_t trunk[1];
+    gbuff_t *body = http->body;
 
-    if (http_is_chuncked(headers, headers_count)) {
-        if (gbuff_init(trunk, MAX_TRUNK_SIZE) != 0) {
-            return NULL;
+    if (gbuff_init(trunk, MAX_TRUNK_SIZE) != 0) {
+        return -1;
+    }
+
+    while (1) {
+        ssize_t n = http_readline(http, trunk->data, trunk->cap);
+        if (n <= 0) {
+            goto fail;
         }
-        if (gbuff_init(body, MAX_TRUNK_SIZE) != 0) {
+
+        size_t chunk_len = strtoul(trunk->data, NULL, 16);
+        if (chunk_len == 0) {
+            // 跳过最后空行
+            http_readline(http, trunk->data, trunk->cap);
             gbuff_free(trunk);
-            return NULL;
+            gbuff_appendf(body, ""); // null-terminate
+            return 0;
         }
 
-        while (1) {
-            ssize_t n = http_readline(http, trunk->data, trunk->cap);
-            if (n <= 0) {
-                goto fail;
-            }
-
-            size_t chunk_len = strtoul(trunk->data, NULL, 16);
-            if (chunk_len == 0) {
-                // 跳过最后空行
-                http_readline(http, trunk->data, trunk->cap);
-                gbuff_free(trunk);
-                gbuff_appendf(body, ""); // null-terminate
-                return body->data;
-            }
-
-            /* Read into trunk */
-            if (gbuff_ensure(trunk, chunk_len + 2) != 0) {
-                goto fail;
-            }
-            if (http_read(http, trunk->data, chunk_len) != chunk_len) {
-                goto fail;
-            }
-
-            /* Copy trunk into body */
-            if (gbuff_ensure(body, body->len + chunk_len + 1) != 0) {
-                goto fail;
-            }
-
-            if (gbuff_put(body, trunk->data, chunk_len) < 0) {
-                goto fail;
-            }
-
-            // skip \r\n
-            n = http_readline(http, trunk->data, trunk->cap);
-            assert(n == 2);
+        /* Read into trunk */
+        if (gbuff_ensure(trunk, chunk_len + 2) != 0) {
+            goto fail;
+        }
+        if (http_read(http, trunk->data, chunk_len) != chunk_len) {
+            goto fail;
         }
 
-    fail:
-        gbuff_free(trunk);
+        /* Copy trunk into body */
+        if (gbuff_ensure(body, body->len + chunk_len + 1) != 0) {
+            goto fail;
+        }
+
+        if (gbuff_put(body, trunk->data, chunk_len) < 0) {
+            goto fail;
+        }
+
+        // skip \r\n
+        n = http_readline(http, trunk->data, trunk->cap);
+        assert(n == 2);
+    }
+
+fail:
+    gbuff_free(trunk);
+    gbuff_free(body);
+    return -1;
+}
+
+static int
+http_content_body(http_t *http) {
+    gbuff_t *body = http->body;
+
+    size_t len = header_content_length(http);
+    if (gbuff_init(body, len + 1) != 0) {
+        return -1;
+    }
+
+    ssize_t res = http_read(http, body->data, len);
+    if (res != len) {
         gbuff_free(body);
-        return NULL;
+        return -1;
+    }
+
+    body->len = len;
+    body->data[len] = '\0';
+    return 0;
+}
+
+static int
+http_body(http_t *http) {
+    gbuff_clear(http->body);
+
+    if (http_is_chuncked(http)) {
+        return http_chuncked_body(http);
     } else {
-        size_t len = header_content_length(headers, headers_count);
-        if (gbuff_init(body, len + 1) != 0) {
-            return NULL;
-        }
-
-        ssize_t res = http_read(http, body->data, len);
-        if (res != len) {
-            gbuff_free(body);
-            return NULL;
-        }
-
-        body->len = len;
-        body->data[len] = '\0';
-        return body->data;
+        return http_content_body(http);
     }
 }
 
-char *
+const char *
 http_request(http_t *http, const gstr_t *path, const gstr_t *data) {
     assert(path->data[0] == '/');
-
-    char *body = NULL;
-    cookiejar_t *cookiejar = http->cookiejar;
 
     /* TCP connect */
     int res = http_connect(http);
@@ -358,19 +389,25 @@ http_request(http_t *http, const gstr_t *path, const gstr_t *data) {
         return NULL;
     }
     /* Headers */
-    char buf[MAX_BUF_SIZE];
-    size_t headers_count = http_section(http, buf, sizeof(buf));
-    assert(headers_count < 16);
-    const char **headers = alloca(headers_count * sizeof(char *));
-    http_headers(headers, buf, headers_count);
+    char headers_section[MAX_BUF_SIZE];
+    size_t headers_count =
+        http_section(http, headers_section, sizeof(headers_section));
+    http->headers->list = alloca(headers_count * sizeof(char *));
+    http->headers->count = headers_count;
+
+    http_headers(http, headers_section);
     /* Cookies */
+    cookiejar_t *cookiejar = http->cookiejar;
     if (cookiejar != NULL) {
-        cookiejar_resolve(cookiejar, headers, headers_count);
+        cookiejar_resolve(cookiejar, http->headers->list, headers_count);
     }
     /* Entire body */
-    body = http_body(http, headers, headers_count);
-
+    res = http_body(http);
+    if (res != 0) {
+        return NULL;
+    }
+    /* Close socket */
     http_close(http);
 
-    return body;
+    return http->body->data;
 }

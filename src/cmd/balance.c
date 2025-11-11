@@ -174,7 +174,11 @@ cmd_info(int argc, char **argv) {
     int res;
     info_t info[1] = {0};
 
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     const char *content = http_get_root(http);
     if (content == NULL) {
@@ -211,7 +215,11 @@ cmd_fee(int argc, char **argv) {
     uint64_t fee_num;
     char fee_str[16];
 
-    http_t *http = http_init(LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    http_t *http = alloca(HTTP_T_SIZE);
+    res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return EXIT_FAILURE;
+    }
 
     const char *content = http_get_root(http);
     if (content == NULL) {
