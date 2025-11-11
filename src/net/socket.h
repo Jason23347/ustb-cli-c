@@ -2,7 +2,7 @@
 #define SOCKET_H
 
 typedef int SOCKET;
-static SOCKET INVALID_SOCKET = -1;
+static const SOCKET INVALID_SOCKET = -1;
 
 #include <stdint.h>
 
