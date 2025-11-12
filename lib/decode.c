@@ -33,13 +33,13 @@ decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
 
 #elif defined(USE_BUILTIN_DECODER)
 
-int decode_gb2312(gstr_t *utf8_out, const gstr_t *gbk_in) {
+int decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
     return 0;
 }
 
 #else /* GB2312_DECODER_DISABLED */
 
-int decode_gb2312(gstr_t *utf8_out, const gstr_t *gbk_in) {
+int decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
     return 0;
 }
 
