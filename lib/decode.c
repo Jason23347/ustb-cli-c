@@ -10,7 +10,7 @@
 
 int
 decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
-    size_t in_bytes_left = gb_in->len;
+    size_t in_bytes_left = gb_in->len + 1;
     size_t out_bytes_left = utf8_out->cap;
     char *inbuf = gb_in->data;
     char *outbuf = utf8_out->data;

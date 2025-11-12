@@ -483,7 +483,7 @@ cmd_whoami(int argc, char **argv) {
     char nid[MAX_VAR_LEN] = {0};
     {
         const struct extract ext[1] = {{
-            .dest = username,
+            .dest = nid,
             .src = content,
             .fmt = &gstr_from_const("%[^'\"]s"),
             .prefix = &gstr_from_const("NID"),
@@ -502,21 +502,18 @@ cmd_whoami(int argc, char **argv) {
     gstr_t nid_str[1] = {{
         .data = nid,
         .len = strlen(nid),
-        .cap = sizeof(nid),
+        .cap = sizeof(nid) - 1,
     }};
-    size_t nid_buf_size = strlen(nid) * 3 / 2;
-    gstr_t nid_utf8[1] = {{
-        .data = alloca(nid_buf_size),
-        .len = 0,
-        .cap = nid_buf_size,
-    }};
-    decode_gb2312(nid_utf8, nid_str);
+    size_t nid_buf_size = strlen(nid) * 3 / 2 + 1;
 
     if (config->mode == PRINT_UNAME) {
         printf("%s", username);
     } else if (config->mode == PRINT_NID) {
         printf("%s", nid);
     } else if (config->mode == PRINT_ALL) {
+        gstr_t nid_utf8[1] = {gbuff_alloca(nid_buf_size)};
+        gbuff_clear(nid_utf8);
+        decode_gb2312(nid_utf8, nid_str);
         printf("%s (%s)\n", username, nid_utf8->data);
     } else {
         return EXIT_FAILURE;
