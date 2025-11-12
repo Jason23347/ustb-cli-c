@@ -1,6 +1,7 @@
 #ifndef CALC_FLOW_H
 #define CALC_FLOW_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/time.h>
 
