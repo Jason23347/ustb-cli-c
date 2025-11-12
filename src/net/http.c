@@ -340,7 +340,6 @@ http_chuncked_body(http_t *http) {
 
 fail:
     gbuff_free(trunk);
-    gbuff_free(body);
     return -1;
 }
 
@@ -355,7 +354,6 @@ http_content_body(http_t *http) {
 
     ssize_t res = http_read(http, body->data, len);
     if (res != len) {
-        gbuff_free(body);
         return -1;
     }
 

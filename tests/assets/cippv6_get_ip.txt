@@ -1,0 +1,13 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 23 Oct 2025 12:40:46 GMT
+Content-Type: text/javascript;charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/5.5.9-1ubuntu4.22
+
+3a
+gIpV6Addr = '2001:0da8:0208:1145:1419:dead:beaf:6666';
+
+
+0
