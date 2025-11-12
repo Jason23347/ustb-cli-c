@@ -120,11 +120,9 @@ cookiejar_resolve(cookiejar_t *cookiejar, const char **headers, size_t count) {
 
 const char *
 cookiejar_str(const cookiejar_t *cookiejar) {
-    if (cookiejar != NULL) {
-        return cookiejar->str->data;
-    } else {
-        return NULL;
-    }
+    assert(cookiejar != NULL);
+
+    return cookiejar->str->data;
 }
 
 size_t
