@@ -64,7 +64,6 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     return 0;
 
 fail:
-    free(http);
     return -1;
 }
 
@@ -73,7 +72,7 @@ http_free(http_t *http) {
     if (http->cookiejar) {
         cookiejar_free(http->cookiejar);
     }
-    free(http);
+    gbuff_free(http->body);
 }
 
 int
@@ -205,7 +204,9 @@ http_section(const http_t *http, char *buf, size_t maxlen) {
 
     for (line_count = 0; 1; line_count++) {
         size_t len = http_readline(http, p, maxlen - used);
-        if (len == 2) {
+        if (len <= 0) {
+            break;
+        } else if (len == 2) {
             line_count--;
             break;
         }
@@ -348,7 +349,7 @@ http_content_body(http_t *http) {
     gbuff_t *body = http->body;
 
     size_t len = header_content_length(http);
-    if (gbuff_init(body, len + 1) != 0) {
+    if (gbuff_ensure(body, len + 1) != 0) {
         return -1;
     }
 
@@ -392,6 +393,10 @@ http_request(http_t *http, const gstr_t *path, const gstr_t *data) {
     char headers_section[MAX_BUF_SIZE];
     size_t headers_count =
         http_section(http, headers_section, sizeof(headers_section));
+    if (headers_count == 0) {
+        /* Unknown Error */
+        return NULL;
+    }
     http->headers->list = alloca(headers_count * sizeof(char *));
     http->headers->count = headers_count;
 
