@@ -118,9 +118,9 @@ speedtest_download(const speedtest_t *config) {
         return 0;
     }
 
-    gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
+    gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
-    gstr_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
+    gbuff_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
                  config->filesizeMB);
 
     http_connect(http);
@@ -169,9 +169,9 @@ speedtest_upload(const speedtest_t *config) {
         return 0;
     }
 
-    gstr_t str[1] = {gstr_alloca(MAX_BUF_SIZE)};
+    gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
-    gstr_appendf(str, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
+    gbuff_appendf(str, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
 
     http_connect(http);
 
@@ -261,11 +261,11 @@ http_get_flow(http_t *http, uint64_t *flow) {
     const struct extract ext[1] = {{
         .dest = flow,
         .src = content,
-        .fmt = &gstr_from_const(uint64_spec),
-        .prefix = &gstr_from_const("flow"),
+        .fmt = &gbuff_from_const(uint64_spec),
+        .prefix = &gbuff_from_const("flow"),
         .quoted = EXT_QUOTED,
     }};
-    res = gstr_extract(ext);
+    res = gbuff_extract(ext);
     if (res < 0) {
         return -1;
     }

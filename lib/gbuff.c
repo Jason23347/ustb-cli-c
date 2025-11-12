@@ -1,4 +1,5 @@
 #include "gbuff.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,12 @@ gbuff_init(gbuff_t *buff, size_t size) {
 
 int
 gbuff_ensure(gbuff_t *buff, size_t size) {
+    assert(buff != NULL);
+    assert(buff->data != NULL);
+#ifndef NDEBUG
+    assert(buff->_heap_flag == 1);
+#endif
+
     if (buff->cap < size) {
         return gbuff_realloc(buff, size);
     } else {
@@ -123,4 +130,36 @@ gbuff_appendf(gbuff_t *buff, const char *fmt, ...) {
     }
 
     return written;
+}
+
+int
+gbuff_extract(const struct extract *data) {
+    int res = 0;
+    char dummy[2];
+
+    const gbuff_t *prefix = data->prefix;
+    const gbuff_t *fmt = data->fmt;
+    const char *src = data->src;
+    void *dest = data->dest;
+    int quoted = data->quoted;
+
+    size_t len = prefix->len + fmt->len + 12;
+    gbuff_t tmp[1] = {gbuff_alloca(len)};
+    gbuff_appendf(tmp, "%s=", prefix->data);
+
+    char *p = strstr(src, tmp->data);
+    if (p == NULL) {
+        return -1;
+    }
+
+    if (quoted) {
+        const char percent = '%';
+        gbuff_appendf(tmp, "%c['\"]%s%c['\"]", percent, fmt->data, percent);
+        res = sscanf(p, tmp->data, &dummy[0], dest, &dummy[1]);
+    } else {
+        gbuff_appendf(tmp, "%s", fmt->data);
+        res = sscanf(p, tmp->data, dest);
+    }
+
+    return res;
 }

@@ -4,7 +4,7 @@
 
 #include "calc/fee.h"
 #include "calc/flow.h"
-#include "lib/gstr.h"
+#include "lib/gbuff.h"
 #include "net/http.h"
 #include "terminal.h"
 
@@ -42,11 +42,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->curr_flow,
             .src = content,
-            .fmt = &gstr_from_const(uint64_spec),
-            .prefix = &gstr_from_const("flow"),
+            .fmt = &gbuff_from_const(uint64_spec),
+            .prefix = &gbuff_from_const("flow"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -56,11 +56,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->curr_flow_v6,
             .src = content,
-            .fmt = &gstr_from_const(uint64_spec),
-            .prefix = &gstr_from_const("v6df"),
+            .fmt = &gbuff_from_const(uint64_spec),
+            .prefix = &gbuff_from_const("v6df"),
             .quoted = EXT_UNQUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -70,11 +70,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->ipv6_mode,
             .src = content,
-            .fmt = &gstr_from_const("%u"),
-            .prefix = &gstr_from_const("v46m"),
+            .fmt = &gbuff_from_const("%u"),
+            .prefix = &gbuff_from_const("v46m"),
             .quoted = EXT_UNQUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -84,11 +84,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->fee,
             .src = content,
-            .fmt = &gstr_from_const("%u"),
-            .prefix = &gstr_from_const("fee"),
+            .fmt = &gbuff_from_const("%u"),
+            .prefix = &gbuff_from_const("fee"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -101,11 +101,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->ipv4_addr,
             .src = content,
-            .fmt = &gstr_from_const("%15[^']"),
-            .prefix = &gstr_from_const("v4ip"),
+            .fmt = &gbuff_from_const("%15[^']"),
+            .prefix = &gbuff_from_const("v4ip"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -115,11 +115,11 @@ info_fetch(info_t *info, const char *content) {
         const struct extract ext[1] = {{
             .dest = &info->ipv6_addr,
             .src = content,
-            .fmt = &gstr_from_const("%39[^']"),
-            .prefix = &gstr_from_const("v6ip"),
+            .fmt = &gbuff_from_const("%39[^']"),
+            .prefix = &gbuff_from_const("v6ip"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -243,11 +243,11 @@ cmd_fee(int argc, char **argv) {
         const struct extract ext[1] = {{
             .dest = &curr_flow,
             .src = content,
-            .fmt = &gstr_from_const(uint64_spec),
-            .prefix = &gstr_from_const("flow"),
+            .fmt = &gbuff_from_const(uint64_spec),
+            .prefix = &gbuff_from_const("flow"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -257,11 +257,11 @@ cmd_fee(int argc, char **argv) {
         const struct extract ext[1] = {{
             .dest = &fee_num,
             .src = content,
-            .fmt = &gstr_from_const("%u"),
-            .prefix = &gstr_from_const("fee"),
+            .fmt = &gbuff_from_const("%u"),
+            .prefix = &gbuff_from_const("fee"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }

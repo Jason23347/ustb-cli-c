@@ -8,7 +8,7 @@ test_cippv6(void **state) {
     http_t *http = alloca(HTTP_T_SIZE);
 
     WITH_SITE(http_init(http, CIPPV6_DOMAIN, 443, IPV6_ONLY) == 0) {
-        const char *body = http_get(http, &gstr_from_const("/whatever"));
+        const char *body = http_get(http, &gbuff_from_const("/whatever"));
         WITH_SITE(body != NULL) {
             const char raw_text[] =
                 "gIpV6Addr = '2001:0da8:0208:1145:1419:dead:beaf:6666';";
@@ -35,7 +35,7 @@ test_cookiejar(void **state) {
 
     WITH_SITE(http_init(http, TEST_DIR "/assets/long_cookie.txt", 80,
                         (IPV4_IPV6 | HTTP_COOKIEJAR)) == 0) {
-        const char *body = http_get(http, &gstr_from_const("/whatever"));
+        const char *body = http_get(http, &gbuff_from_const("/whatever"));
         WITH_SITE(body != NULL) { assert_int_equal(strlen(body), 4); }
         http_free(http);
     }
@@ -47,11 +47,11 @@ test_post_with_cookie(void **state) {
 
     WITH_SITE(http_init(http, TEST_DIR "/assets/long_cookie.txt", 80,
                         (IPV4_IPV6 | HTTP_COOKIEJAR)) == 0) {
-        const char *body = http_get(http, &gstr_from_const("/whatever"));
+        const char *body = http_get(http, &gbuff_from_const("/whatever"));
         WITH_SITE(body != NULL) {
             /* Post with cookie*/
-            body = http_request(http, &gstr_from_const("/whatever"),
-                                &gstr_from_const("a=1&1=1"));
+            body = http_request(http, &gbuff_from_const("/whatever"),
+                                &gbuff_from_const("a=1&1=1"));
         }
         http_free(http);
     }

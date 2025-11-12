@@ -1,7 +1,6 @@
 #include "mem.h"
 
 #include "lib/gbuff.h"
-#include "lib/gstr.h"
 
 int
 WRAP(gbuff_init)(gbuff_t *buff, size_t size) {

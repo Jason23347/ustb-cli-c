@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 int
-decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
+decode_gb2312(gbuff_t *utf8_out, const gbuff_t *gb_in) {
     size_t in_bytes_left = gb_in->len + 1;
     size_t out_bytes_left = utf8_out->cap;
     char *inbuf = gb_in->data;
@@ -33,13 +33,13 @@ decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
 
 #elif defined(USE_BUILTIN_DECODER)
 
-int decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
+int decode_gb2312(gbuff_t *utf8_out, const gbuff_t *gb_in) {
     return 0;
 }
 
 #else /* GB2312_DECODER_DISABLED */
 
-int decode_gb2312(gstr_t *utf8_out, const gstr_t *gb_in) {
+int decode_gb2312(gbuff_t *utf8_out, const gbuff_t *gb_in) {
     return 0;
 }
 

@@ -3,7 +3,7 @@
 #include "cmd.h"
 
 #include "lib/decode.h"
-#include "lib/gstr.h"
+#include "lib/gbuff.h"
 #include "lib/hash.h"
 #include "net/http.h"
 #include "terminal.h"
@@ -34,8 +34,8 @@ typedef struct login {
 } login_t;
 
 typedef struct {
-    gstr_t username[1];
-    gstr_t password[1];
+    gbuff_t username[1];
+    gbuff_t password[1];
 } account_t;
 
 typedef struct device_info {
@@ -180,16 +180,16 @@ account_load_env(account_t *account, const char *env_filepath) {
     while (fgets(line, sizeof(line), fp)) {
         // get USERNAME=xxx and PASSWORD=xxx
         if (0 == strncmp(line, USTB_USERNAME_VAR "=", USTB_USERNAME_LEN)) {
-            gstr_t *username = account->username;
+            gbuff_t *username = account->username;
             size_t offset = strcspn(line, "\r\n");
             line[offset] = '\0';
-            gstr_appendf(username, "%s", line + USTB_USERNAME_LEN);
+            gbuff_appendf(username, "%s", line + USTB_USERNAME_LEN);
         } else if (0 ==
                    strncmp(line, USTB_PASSWORD_VAR "=", USTB_PASSWORD_LEN)) {
-            gstr_t *password = account->password;
+            gbuff_t *password = account->password;
             size_t offset = strcspn(line, "\r\n");
             line[offset] = '\0';
-            gstr_appendf(password, "%s", line + USTB_USERNAME_LEN);
+            gbuff_appendf(password, "%s", line + USTB_USERNAME_LEN);
         }
     }
     fclose(fp);
@@ -216,10 +216,10 @@ ipv6_urlencode(char *dest, const char *ipv6_addr, size_t maxlen) {
 }
 
 static int
-login_url_path(const login_t *config, gstr_t *str) {
+login_url_path(const login_t *config, gbuff_t *str) {
     account_t account[1] = {{
-        .username = {gstr_alloca(MAX_VAR_LEN)},
-        .password = {gstr_alloca(MAX_VAR_LEN)},
+        .username = {gbuff_alloca(MAX_VAR_LEN)},
+        .password = {gbuff_alloca(MAX_VAR_LEN)},
     }};
 
     // Get username & password
@@ -234,13 +234,13 @@ login_url_path(const login_t *config, gstr_t *str) {
         return -1;
     }
 
-    gstr_appendf(str, LOGIN_PATH "?callback=a&DDDDD=%s&upass=%s&0MKKey=123456",
-                 account->username->data, account->password->data);
+    gbuff_appendf(str, LOGIN_PATH "?callback=a&DDDDD=%s&upass=%s&0MKKey=123456",
+                  account->username->data, account->password->data);
     if (config->use_ipv6) {
         char ipv6_encoded[URLENCODED_IPV6_MAX_LEN];
         ipv6_urlencode(ipv6_encoded, config->ipv6_addr, sizeof(ipv6_encoded));
-        gstr_appendf(str, "&v6ip=%.*s", (int)sizeof(ipv6_encoded),
-                     ipv6_encoded);
+        gbuff_appendf(str, "&v6ip=%.*s", (int)sizeof(ipv6_encoded),
+                      ipv6_encoded);
     }
 
     return 0;
@@ -248,7 +248,7 @@ login_url_path(const login_t *config, gstr_t *str) {
 
 /* Default to ~/.ustb.env */
 static int
-get_defule_env_path(gstr_t *home_str) {
+get_defule_env_path(gbuff_t *home_str) {
     const char *home = getenv("HOME");
     if (!home) {
         struct passwd *pw = getpwuid(getuid());
@@ -261,7 +261,7 @@ get_defule_env_path(gstr_t *home_str) {
         return -1;
     }
 
-    gstr_appendf(home_str, "%s/" USTB_ENV_FILENAME, home);
+    gbuff_appendf(home_str, "%s/" USTB_ENV_FILENAME, home);
 
     return 0;
 }
@@ -310,7 +310,7 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
         return -1;
     }
 
-    const char *content = http_get(http, &gstr_from_const(CIPPV6_PATH));
+    const char *content = http_get(http, &gbuff_from_const(CIPPV6_PATH));
     if (content == NULL) {
         // failed to get ipv6
         return -1;
@@ -324,7 +324,7 @@ ipv6_get(char *ipv6_addr, size_t maxlen) {
 }
 
 static int
-login_request(const gstr_t *path) {
+login_request(const gbuff_t *path) {
     http_t *http = alloca(HTTP_T_SIZE);
     int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
     if (res != 0) {
@@ -360,7 +360,7 @@ cmd_login(int argc, char **argv) {
 
     // Fix env filepath
     if (config->env_filepath == NULL) {
-        gstr_t home_str[1] = {gstr_alloca(MAX_PATH_LEN)};
+        gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
         int res = get_defule_env_path(home_str);
         if (res != 0) {
@@ -384,7 +384,7 @@ cmd_login(int argc, char **argv) {
     printf("\n");
 
     // Assemble URL path
-    gstr_t path[1] = {gstr_alloca(MAX_PATH_LEN)};
+    gbuff_t path[1] = {gbuff_alloca(MAX_PATH_LEN)};
     res = login_url_path(config, path);
     if (res != 0) {
         return EXIT_FAILURE;
@@ -407,7 +407,7 @@ cmd_logout(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    const char *content = http_get(http, &gstr_from_const("/F.htm"));
+    const char *content = http_get(http, &gbuff_from_const("/F.htm"));
     if (content == NULL) {
         return EXIT_FAILURE;
     }
@@ -468,11 +468,11 @@ cmd_whoami(int argc, char **argv) {
         const struct extract ext[1] = {{
             .dest = username,
             .src = content,
-            .fmt = &gstr_from_const("%[^'\"]s"),
-            .prefix = &gstr_from_const("uid"),
+            .fmt = &gbuff_from_const("%[^'\"]s"),
+            .prefix = &gbuff_from_const("uid"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -485,11 +485,11 @@ cmd_whoami(int argc, char **argv) {
         const struct extract ext[1] = {{
             .dest = nid,
             .src = content,
-            .fmt = &gstr_from_const("%[^'\"]s"),
-            .prefix = &gstr_from_const("NID"),
+            .fmt = &gbuff_from_const("%[^'\"]s"),
+            .prefix = &gbuff_from_const("NID"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -499,7 +499,7 @@ cmd_whoami(int argc, char **argv) {
     }
 
     /* GBK → UTF-8 */
-    gstr_t nid_str[1] = {{
+    gbuff_t nid_str[1] = {{
         .data = nid,
         .len = strlen(nid),
         .cap = sizeof(nid) - 1,
@@ -511,7 +511,7 @@ cmd_whoami(int argc, char **argv) {
     } else if (config->mode == PRINT_NID) {
         printf("%s", nid);
     } else if (config->mode == PRINT_ALL) {
-        gstr_t nid_utf8[1] = {gbuff_alloca(nid_buf_size)};
+        gbuff_t nid_utf8[1] = {gbuff_alloca(nid_buf_size)};
         gbuff_clear(nid_utf8);
         decode_gb2312(nid_utf8, nid_str);
         printf("%s (%s)\n", username, nid_utf8->data);
@@ -527,17 +527,17 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     int res;
 
     const char *content =
-        http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
+        http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
 
     {
         const struct extract ext[1] = {{
             .dest = form->checkcode,
             .src = content,
-            .fmt = &gstr_from_const("%[^'\"]"),
-            .prefix = &gstr_from_const("checkcode"),
+            .fmt = &gbuff_from_const("%[^'\"]"),
+            .prefix = &gbuff_from_const("checkcode"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             return -1;
         }
@@ -548,11 +548,11 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
         const struct extract ext[1] = {{
             .dest = buf,
             .src = content,
-            .fmt = &gstr_from_const("%[^'\"]"),
-            .prefix = &gstr_from_const("trytimes"),
+            .fmt = &gbuff_from_const("%[^'\"]"),
+            .prefix = &gbuff_from_const("trytimes"),
             .quoted = EXT_QUOTED,
         }};
-        res = gstr_extract(ext);
+        res = gbuff_extract(ext);
         if (res < 0) {
             form->trytimes = 0;
         }
@@ -580,8 +580,8 @@ step_in(const char *p, const char *tag_name) {
     char *pos;
     const char br_left = '<', br_right = '>';
 
-    gstr_t tag[1] = {gstr_alloca(strlen(tag_name) + 2)};
-    gstr_appendf(tag, "%c%s", br_left, tag_name);
+    gbuff_t tag[1] = {gbuff_alloca(strlen(tag_name) + 2)};
+    gbuff_appendf(tag, "%c%s", br_left, tag_name);
 
     /* <tag_name ...> */
     pos = strstr(p, tag->data);
@@ -597,8 +597,8 @@ step_out(const char *p, const char *tag_name) {
     char *pos;
     const char br_left = '<', br_right = '>';
 
-    gstr_t tag[1] = {gstr_alloca(strlen(tag_name) + 4)};
-    gstr_appendf(tag, "%c/%s%c", br_left, tag_name, br_right);
+    gbuff_t tag[1] = {gbuff_alloca(strlen(tag_name) + 4)};
+    gbuff_appendf(tag, "%c/%s%c", br_left, tag_name, br_right);
 
     /* </tag_name ...> */
     pos = strstr(p, tag->data);
@@ -764,23 +764,24 @@ devices_login(http_t *http, const account_t *account) {
     device_form_t form[1];
 
     // 1. Get checkcode & trytime
-    content = http_request(http, &gstr_from_const(DRCOM_FORM_PATH), NULL);
+    content = http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
     if (content == NULL) {
         return -1;
     }
     device_get_form(form, http, account);
 
     // 2. Get random code (never use)
-    content = http_request(http, &gstr_from_const(DRCOM_RANDOMCODE_PATH), NULL);
+    content =
+        http_request(http, &gbuff_from_const(DRCOM_RANDOMCODE_PATH), NULL);
     if (content == NULL) {
         return -1;
     }
 
     // 3. login request
-    gstr_t data[1] = {gstr_alloca(MAX_PATH_LEN)};
-    gstr_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
-                 form->account, form->pw_hash, form->checkcode, form->submit);
-    content = http_request(http, &gstr_from_const(DRCOM_LOGIN_PATH), data);
+    gbuff_t data[1] = {gbuff_alloca(MAX_PATH_LEN)};
+    gbuff_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
+                  form->account, form->pw_hash, form->checkcode, form->submit);
+    content = http_request(http, &gbuff_from_const(DRCOM_LOGIN_PATH), data);
 
     return 0;
 }
@@ -788,7 +789,7 @@ devices_login(http_t *http, const account_t *account) {
 int
 devices_check_online(device_info_t *devices, http_t *http, size_t maxlen) {
     const char *content =
-        http_request(http, &gstr_from_const(DRCOM_DEVICES_PATH), NULL);
+        http_request(http, &gbuff_from_const(DRCOM_DEVICES_PATH), NULL);
     int device_count = devices_parse(devices, content, maxlen);
     if (device_count == -1) {
         /* Maybe login failed */
@@ -878,8 +879,8 @@ cmd_devices(int argc, char **argv) {
         .with_separator = 0,
     }};
     account_t account[1] = {{
-        .username = {gstr_alloca(MAX_VAR_LEN)},
-        .password = {gstr_alloca(MAX_VAR_LEN)},
+        .username = {gbuff_alloca(MAX_VAR_LEN)},
+        .password = {gbuff_alloca(MAX_VAR_LEN)},
     }};
     device_info_t devices[MAX_ONLINE_DEVICE_COUNT];
     size_t max_online_count = sizeof(devices) / sizeof(devices[0]);
@@ -891,7 +892,7 @@ cmd_devices(int argc, char **argv) {
 
     // Fix env filepath
     if (config->env_filepath == NULL) {
-        gstr_t home_str[1] = {gstr_alloca(MAX_PATH_LEN)};
+        gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
         res = get_defule_env_path(home_str);
         if (res != 0) {

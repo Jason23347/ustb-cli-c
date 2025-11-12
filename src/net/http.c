@@ -32,7 +32,7 @@ typedef struct http {
     // Results
     int status_code;
     http_headers_t headers[1];
-    gstr_t body[1];
+    gbuff_t body[1];
 } http_t;
 
 const size_t HTTP_T_SIZE = sizeof(struct http);
@@ -87,7 +87,8 @@ http_connect(http_t *http) {
 }
 
 int
-http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data) {
+http_send_request(const http_t *http, const gbuff_t *path,
+                  const gbuff_t *data) {
     size_t req_len = path->len + 33 + strlen(http->domain);
     const cookiejar_t *cookiejar = http->cookiejar;
     size_t cookie_len = cookiejar_length(cookiejar);
@@ -97,32 +98,32 @@ http_send_request(const http_t *http, const gstr_t *path, const gstr_t *data) {
     if (data != NULL) {
         req_len += data->len + 80;
     }
-    gstr_t req[1] = {gstr_alloca(req_len)};
+    gbuff_t req[1] = {gbuff_alloca(req_len)};
     /* Method & path */
-    gstr_appendf(req, "%s %s HTTP/1.1\r\n", (data == NULL ? "GET" : "POST"),
-                 path->data);
+    gbuff_appendf(req, "%s %s HTTP/1.1\r\n", (data == NULL ? "GET" : "POST"),
+                  path->data);
     /* Cookie */
     if ((cookiejar != NULL) && (cookie_len > 0)) {
-        gstr_appendf(req, "Cookie: %s\r\n", cookiejar_str(cookiejar));
+        gbuff_appendf(req, "Cookie: %s\r\n", cookiejar_str(cookiejar));
     }
     /* Form data */
     if (data != NULL) {
-        gstr_appendf(req,
-                     "Content-Type: application/x-www-form-urlencoded\r\n");
-        gstr_appendf(req, "Content-Length: %d\r\n", data->len);
+        gbuff_appendf(req,
+                      "Content-Type: application/x-www-form-urlencoded\r\n");
+        gbuff_appendf(req, "Content-Length: %d\r\n", data->len);
     }
     /* Host请求头是增加幸福感的关键，不能删掉 */
     if (http->port != 80) {
-        gstr_appendf(req, "Host: %s:%u\r\n", http->domain, http->port);
+        gbuff_appendf(req, "Host: %s:%u\r\n", http->domain, http->port);
     } else {
-        gstr_appendf(req, "Host: %s\r\n", http->domain);
+        gbuff_appendf(req, "Host: %s\r\n", http->domain);
     }
     /* End of headers */
-    gstr_appendf(req, "\r\n");
+    gbuff_appendf(req, "\r\n");
 
     /* Post data */
     if (data != NULL) {
-        gstr_appendf(req, "%s\r\n\r\n", data->data);
+        gbuff_appendf(req, "%s\r\n\r\n", data->data);
     }
 
     size_t len = req->len;
@@ -374,7 +375,7 @@ http_body(http_t *http) {
 }
 
 const char *
-http_request(http_t *http, const gstr_t *path, const gstr_t *data) {
+http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
     assert(path->data[0] == '/');
 
     /* TCP connect */

@@ -41,7 +41,6 @@ add_library(mock STATIC
     mock/tcp.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../lib/gbuff.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/gstr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/fee.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/flow.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/timer.c

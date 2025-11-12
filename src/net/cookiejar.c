@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 struct cookiejar {
-    gstr_t str[1];
+    gbuff_t str[1];
     int count;
 };
 
@@ -18,7 +18,7 @@ cookiejar_init(size_t maxlen) {
         return NULL;
     }
     /* Allocate gstr buffer */
-    gstr_t *str = cookiejar->str;
+    gbuff_t *str = cookiejar->str;
     if (gbuff_init(str, maxlen) != 0) {
         free(cookiejar);
         return NULL;
@@ -30,15 +30,15 @@ cookiejar_init(size_t maxlen) {
 int
 cookiejar_add(cookiejar_t *cookiejar, const char *key, const char *value) {
     int res;
-    gstr_t *str = cookiejar->str;
+    gbuff_t *str = cookiejar->str;
     /* Ensure can append */
     size_t append_len = strlen(key) + strlen(value) + 4;
     gbuff_ensure(str, str->len + append_len);
 
     if (cookiejar->count <= 0) {
-        res = gstr_appendf(str, "%s=%s", key, value);
+        res = gbuff_appendf(str, "%s=%s", key, value);
     } else {
-        res = gstr_appendf(str, "; %s=%s", key, value);
+        res = gbuff_appendf(str, "; %s=%s", key, value);
     }
 
     cookiejar->count++;
