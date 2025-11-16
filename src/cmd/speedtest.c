@@ -259,7 +259,7 @@ http_get_flow(http_t *http, uint64_t *flow) {
     }
 
     const struct extract ext[1] = {{
-        .dest = &flow,
+        .dest = flow,
         .src = content,
         .fmt = &gstr_from_const(uint64_spec),
         .prefix = &gstr_from_const("flow"),
