@@ -1,11 +1,11 @@
 #ifndef CALC_FEE_H
 #define CALC_FEE_H
 
-#include "text.h"
-
 #include <stddef.h>
 #include <stdint.h>
 
+/* 手动添加小数点 */
+void assign_decimal(char *str, size_t maxlen, int64_t number, size_t n);
 static inline void
 fee_format(char *str, size_t len, unsigned fee) {
     assign_decimal(str, len, fee, 4);

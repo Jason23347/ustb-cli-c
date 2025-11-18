@@ -3,9 +3,7 @@
 #include "calc/fee.c"
 #include "calc/flow.c"
 #include "calc/timer.c"
-#define main __main
-#include "text.c"
-#undef main
+#include "debug.c"
 
 #define BUF_SIZE 16
 

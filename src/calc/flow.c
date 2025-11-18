@@ -3,7 +3,6 @@
 #include "flow.h"
 
 #include "terminal.h"
-#include "text.h"
 #include "timer.h"
 
 #include <stdio.h>
