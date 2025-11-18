@@ -1,10 +1,11 @@
 #include "text.h"
 
-#include "cmd.h"
+#include "cmd/cmd.h"
 
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if __WORDSIZE == 64
@@ -58,7 +59,7 @@ int
 main(int argc, char **argv) {
     if (argc < 2) {
         cmd_help(argc, argv);
-        return 1;
+        return EXIT_FAILURE;
     }
 
     return cmd_parse(argc, argv);

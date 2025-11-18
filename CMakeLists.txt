@@ -8,9 +8,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_C_FLAGS "-Wall -Wno-unused-variable")
+set(CMAKE_C_FLAGS "-Wall -Werror=implicit-function-declaration")
 set(CMAKE_C_FLAGS_DEBUG "-g -O0")
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O3 -s -w -flto -ffast-math")
+set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -Wno-unused-variable -O3 -s -w -flto -ffast-math")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-DNDEBUG -g -O2")
 
 configure_file(

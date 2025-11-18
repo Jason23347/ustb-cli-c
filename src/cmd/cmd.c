@@ -5,8 +5,8 @@
 #include "terminal.h"
 
 #include <cargs.h>
-
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 extern int print_default_help(int argc, char **argv);
@@ -142,7 +142,7 @@ cmd_help(int argc, char **argv) {
     printf("\nGlobal Options:\n");
     cag_option_print(global_options, CAG_ARRAY_SIZE(global_options), stdout);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int
@@ -159,7 +159,7 @@ print_command_help(int argc, char **argv, const struct cag_option *cmd_opts,
     printf("\nGlobal Options:\n");
     cag_option_print(global_options, CAG_ARRAY_SIZE(global_options), stdout);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int
@@ -225,7 +225,7 @@ cmd_version(int argc, char **argv) {
         "SOFTWARE."
         "\n\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int

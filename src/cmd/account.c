@@ -162,18 +162,18 @@ print_devices_help(int argc, char **argv) {
                               CAG_ARRAY_SIZE(devices_options));
 }
 
-static int
+static USTB_RET
 account_load_env(account_t *account, const char *env_filepath) {
     // Check if config->env_filepath exists.
     if (access(env_filepath, F_OK) != 0) {
         fprintf(stderr, "Env file does not exist: \"%s\"\n", env_filepath);
-        return -1;
+        return USTB_ERR;
     }
 
     FILE *fp = fopen(env_filepath, "r");
     if (!fp) {
         fprintf(stderr, "Failed to open env file: %s\n", env_filepath);
-        return -1;
+        return USTB_ERR;
     }
 
     char line[MAX_LINE_LEN];
@@ -194,28 +194,25 @@ account_load_env(account_t *account, const char *env_filepath) {
     }
     fclose(fp);
 
-    return 0;
+    return USTB_OK;
 }
 
 // TODO 非常有优化空间
-static size_t
-ipv6_urlencode(char *dest, const char *ipv6_addr, size_t maxlen) {
-    size_t di = 0;
-    for (size_t si = 0;
-         (ipv6_addr[si] != '\0') && (di < URLENCODED_IPV6_MAX_LEN); si++) {
-        if (ipv6_addr[si] == ':') {
-            dest[di++] = '%';
-            dest[di++] = '3';
-            dest[di++] = 'A';
+static void
+ipv6_urlencode(gbuff_t *dest, const char *ipv6_addr, size_t maxlen) {
+    const char colon = ':';
+    const char colon_encoded[] = "%3A";
+    for (const char *p = ipv6_addr; *p != '\0'; p++) {
+        if (*p == colon) {
+            gbuff_appendf(dest, "%s", colon_encoded);
         } else {
-            dest[di++] = ipv6_addr[si];
+            gbuff_appendf(dest, "%c", *p);
         }
     }
-    dest[di] = '\0';
-    return di;
+    gbuff_appendf(dest, "");
 }
 
-static int
+static USTB_RET
 login_url_path(const login_t *config, gbuff_t *str) {
     account_t account[1] = {{
         .username = {gbuff_alloca(MAX_VAR_LEN)},
@@ -224,30 +221,35 @@ login_url_path(const login_t *config, gbuff_t *str) {
 
     // Get username & password
     int res = account_load_env(account, config->env_filepath);
-    if (res != 0) {
-        return -1;
+    if (res != USTB_OK) {
+        return USTB_ERR;
     }
 
     if ((account->username->len == 0) || (account->password->len == 0)) {
         fprintf(stderr, USTB_USERNAME_VAR " or " USTB_PASSWORD_VAR
                                           " not found in env file\n");
-        return -1;
+        return USTB_ERR;
     }
 
-    gbuff_appendf(str, LOGIN_PATH "?callback=a&DDDDD=%s&upass=%s&0MKKey=123456",
-                  account->username->data, account->password->data);
+    /* The order matters */
+    gbuff_appendf(str, LOGIN_PATH "?callback=a&DDDDD=");
+    gbuff_concat(str, account->username);
+    gbuff_appendf(str, "&upass=");
+    gbuff_concat(str, account->password);
+    gbuff_appendf(str, "&0MKKey=123456");
+
     if (config->use_ipv6) {
-        char ipv6_encoded[URLENCODED_IPV6_MAX_LEN];
+        gbuff_t *ipv6_encoded = &gbuff_alloca(URLENCODED_IPV6_MAX_LEN);
         ipv6_urlencode(ipv6_encoded, config->ipv6_addr, sizeof(ipv6_encoded));
-        gbuff_appendf(str, "&v6ip=%.*s", (int)sizeof(ipv6_encoded),
-                      ipv6_encoded);
+        gbuff_appendf(str, "&v6ip=");
+        gbuff_concat(str, ipv6_encoded);
     }
 
-    return 0;
+    return USTB_OK;
 }
 
 /* Default to ~/.ustb.env */
-static int
+static USTB_RET
 get_defule_env_path(gbuff_t *home_str) {
     const char *home = getenv("HOME");
     if (!home) {
@@ -258,15 +260,15 @@ get_defule_env_path(gbuff_t *home_str) {
     }
 
     if (!home) {
-        return -1;
+        return USTB_ERR;
     }
 
     gbuff_appendf(home_str, "%s/" USTB_ENV_FILENAME, home);
 
-    return 0;
+    return USTB_OK;
 }
 
-int
+static USTB_RET
 login_get_config(login_t *config, int argc, char **argv) {
     const char *value;
     cag_option_context context;
@@ -294,55 +296,55 @@ login_get_config(login_t *config, int argc, char **argv) {
         case '?':
             cag_option_print_error(&context, stdout);
             print_login_help(argc + 1, argv - 1);
-            return -1;
+            return USTB_ERR;
         }
     }
 
-    return 0;
+    return USTB_OK;
 }
 
-static int
+static USTB_RET
 ipv6_get(char *ipv6_addr, size_t maxlen) {
     int res;
     http_t *http = alloca(HTTP_T_SIZE);
     res = http_init(http, CIPPV6_DOMAIN, CIPPV6_PORT, IPV6_ONLY);
     if (res != 0) {
-        return -1;
+        return USTB_ERR;
     }
 
     const char *content = http_get(http, &gbuff_from_const(CIPPV6_PATH));
     if (content == NULL) {
         // failed to get ipv6
-        return -1;
+        return USTB_ERR;
     }
 
     // Extract ipv6_addr between single-quotes
     const char *p = strchr(content, '\'');
     sscanf(p + 1, "%39[^']s", ipv6_addr);
 
-    return 0;
+    return USTB_OK;
 }
 
-static int
+static USTB_RET
 login_request(const gbuff_t *path) {
     http_t *http = alloca(HTTP_T_SIZE);
     int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
     if (res != 0) {
-        return -1;
+        return USTB_ERR;
     }
 
     const char *content = http_get(http, path);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     if (strstr(content, "\"result\":1") == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     debug("%s\n", content);
 
-    return 0;
+    return USTB_OK;
 }
 
 int
@@ -354,7 +356,7 @@ cmd_login(int argc, char **argv) {
 
     // Get username & password & other things
     res = login_get_config(config, argc, argv);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -363,8 +365,8 @@ cmd_login(int argc, char **argv) {
         gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
         int res = get_defule_env_path(home_str);
-        if (res != 0) {
-            return -1;
+        if (res != USTB_OK) {
+            return USTB_ERR;
         }
         config->env_filepath = home_str->data;
     }
@@ -373,7 +375,7 @@ cmd_login(int argc, char **argv) {
     if (config->use_ipv6) {
         printf("Fetching IPV6 address...");
         res = ipv6_get(ipv6_buf, sizeof(ipv6_buf));
-        if (res != 0) {
+        if (res != USTB_OK) {
             printf("failed");
             config->use_ipv6 = 0;
         } else {
@@ -386,13 +388,13 @@ cmd_login(int argc, char **argv) {
     // Assemble URL path
     gbuff_t path[1] = {gbuff_alloca(MAX_PATH_LEN)};
     res = login_url_path(config, path);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
     // Send request
     res = login_request(path);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -415,7 +417,7 @@ cmd_logout(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-int
+static USTB_RET
 whoami_get_config(whoami_t *config, int argc, char **argv) {
     cag_option_context context;
 
@@ -432,11 +434,11 @@ whoami_get_config(whoami_t *config, int argc, char **argv) {
         case '?':
             cag_option_print_error(&context, stdout);
             print_whoami_help(argc + 1, argv - 1);
-            return -1;
+            return USTB_ERR;
         }
     }
 
-    return 0;
+    return USTB_OK;
 }
 
 int
@@ -448,7 +450,7 @@ cmd_whoami(int argc, char **argv) {
     }};
 
     res = whoami_get_config(config, argc, argv);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -474,7 +476,7 @@ cmd_whoami(int argc, char **argv) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
     if (res < 0) {
@@ -491,7 +493,7 @@ cmd_whoami(int argc, char **argv) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
     if (res < 0) {
@@ -522,7 +524,7 @@ cmd_whoami(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-int
+static USTB_RET
 device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     int res;
 
@@ -539,7 +541,7 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -564,7 +566,7 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     }
 
     if (form->trytimes >= 3) {
-        return -1;
+        return USTB_ERR;
     }
 
     form->account = account->username->data;
@@ -572,7 +574,7 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     /* 登[空格]录 */
     form->submit = "\%E7\%99\%BB+\%E5\%BD\%95";
 
-    return 0;
+    return USTB_OK;
 }
 
 static char *
@@ -608,7 +610,7 @@ step_out(const char *p, const char *tag_name) {
     return (pos + tag->len);
 }
 
-int
+static ssize_t
 devices_parse(device_info_t *devices, const char *content, size_t count) {
     size_t i = 0;
     size_t len;
@@ -712,7 +714,7 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
     return i;
 }
 
-int
+static USTB_RET
 devices_get_config(device_t *config, int argc, char **argv) {
     const char *value;
     cag_option_context context;
@@ -745,7 +747,7 @@ devices_get_config(device_t *config, int argc, char **argv) {
         case '?':
             cag_option_print_error(&context, stdout);
             print_whoami_help(argc + 1, argv - 1);
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -755,10 +757,10 @@ devices_get_config(device_t *config, int argc, char **argv) {
         }
     }
 
-    return 0;
+    return USTB_OK;
 }
 
-int
+static USTB_RET
 devices_login(http_t *http, const account_t *account) {
     const char *content;
     device_form_t form[1];
@@ -766,7 +768,7 @@ devices_login(http_t *http, const account_t *account) {
     // 1. Get checkcode & trytime
     content = http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
     device_get_form(form, http, account);
 
@@ -774,7 +776,7 @@ devices_login(http_t *http, const account_t *account) {
     content =
         http_request(http, &gbuff_from_const(DRCOM_RANDOMCODE_PATH), NULL);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     // 3. login request
@@ -783,23 +785,23 @@ devices_login(http_t *http, const account_t *account) {
                   form->account, form->pw_hash, form->checkcode, form->submit);
     content = http_request(http, &gbuff_from_const(DRCOM_LOGIN_PATH), data);
 
-    return 0;
+    return USTB_OK;
 }
 
-int
+static USTB_RET
 devices_check_online(device_info_t *devices, http_t *http, size_t maxlen) {
     const char *content =
         http_request(http, &gbuff_from_const(DRCOM_DEVICES_PATH), NULL);
     int device_count = devices_parse(devices, content, maxlen);
-    if (device_count == -1) {
+    if (device_count < 0) {
         /* Maybe login failed */
-        return -1;
+        return USTB_ERR;
     }
 
     return device_count;
 }
 
-void
+static void
 devices_format_mac(device_info_t *devices, size_t device_count) {
     char hex[MAC_HEX_LEN + 1];
 
@@ -816,7 +818,7 @@ devices_format_mac(device_info_t *devices, size_t device_count) {
     }
 }
 
-void
+static void
 devices_output(device_t *config, device_info_t *devices, size_t device_count) {
     const char *header_format;
     const char *body_format;
@@ -886,7 +888,7 @@ cmd_devices(int argc, char **argv) {
     size_t max_online_count = sizeof(devices) / sizeof(devices[0]);
 
     res = devices_get_config(config, argc, argv);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -895,7 +897,7 @@ cmd_devices(int argc, char **argv) {
         gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
         res = get_defule_env_path(home_str);
-        if (res != 0) {
+        if (res != USTB_OK) {
             return EXIT_FAILURE;
         }
         config->env_filepath = home_str->data;
@@ -903,7 +905,7 @@ cmd_devices(int argc, char **argv) {
 
     // Get username & password
     res = account_load_env(account, config->env_filepath);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -916,7 +918,7 @@ cmd_devices(int argc, char **argv) {
 
     // Perform login
     res = devices_login(http, account);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 

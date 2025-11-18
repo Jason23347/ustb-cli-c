@@ -70,7 +70,7 @@ print_speedtest_help(int argc, char **argv) {
                               CAG_ARRAY_SIZE(speedtest_options));
 }
 
-int
+static USTB_RET
 speedtest_get_config(speedtest_t *config, int argc, char **argv) {
     const char *value;
     cag_option_context context;
@@ -98,11 +98,11 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
         case '?':
             cag_option_print_error(&context, stdout);
             print_speedtest_help(argc + 1, argv - 1);
-            return -1;
+            return USTB_ERR;
         }
     }
 
-    return 0;
+    return USTB_OK;
 }
 
 static suseconds_t
@@ -121,7 +121,7 @@ speedtest_download(const speedtest_t *config) {
     gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
     gbuff_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
-                 config->filesizeMB);
+                  config->filesizeMB);
 
     http_connect(http);
     http_send_request(http, str, NULL);
@@ -210,7 +210,7 @@ cmd_speedtest(int argc, char **argv) {
     /* TODO 多线程下载/上传 */
 
     res = speedtest_get_config(config, argc, argv);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
     /* Default test both upload & download speed */
@@ -247,15 +247,15 @@ cmd_speedtest(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-static int
+static USTB_RET
 http_get_flow(http_t *http, uint64_t *flow) {
     assert(flow != NULL);
 
     int res;
 
-   const char *content = http_get_root(http);
+    const char *content = http_get_root(http);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     const struct extract ext[1] = {{
@@ -267,10 +267,10 @@ http_get_flow(http_t *http, uint64_t *flow) {
     }};
     res = gbuff_extract(ext);
     if (res < 0) {
-        return -1;
+        return USTB_ERR;
     }
 
-    return 0;
+    return USTB_OK;
 }
 
 int
@@ -288,7 +288,7 @@ cmd_monitor(int argc, char **argv) {
 
     for (; 1; sleep_till_next_sec()) {
         res = http_get_flow(http, &download);
-        if (res != 0) {
+        if (res != USTB_OK) {
             set_color(RED);
             printf("ERROR");
             reset_color();

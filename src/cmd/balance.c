@@ -34,7 +34,7 @@ logged_in(const char *content) {
     return strstr(content, "uid=") != NULL;
 }
 
-int
+static USTB_RET
 info_fetch(info_t *info, const char *content) {
     int res;
 
@@ -48,7 +48,7 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -62,7 +62,7 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -76,7 +76,7 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -90,7 +90,7 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -107,7 +107,7 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -121,11 +121,11 @@ info_fetch(info_t *info, const char *content) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
-    return 0;
+    return USTB_OK;
 }
 
 static void
@@ -182,23 +182,23 @@ cmd_info(int argc, char **argv) {
 
     const char *content = http_get_root(http);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     const char *p = strstr(content, "<script");
     if (p == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     if (!logged_in(p)) {
         set_color(YELLOW);
         printf("Login required.\n");
         reset_color();
-        return -1;
+        return USTB_ERR;
     }
 
     res = info_fetch(info, p);
-    if (res != 0) {
+    if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
@@ -223,7 +223,7 @@ cmd_fee(int argc, char **argv) {
 
     const char *content = http_get_root(http);
     if (content == NULL) {
-        return -1;
+        return USTB_ERR;
     }
 
     if (!logged_in(content)) {
@@ -249,7 +249,7 @@ cmd_fee(int argc, char **argv) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 
@@ -263,7 +263,7 @@ cmd_fee(int argc, char **argv) {
         }};
         res = gbuff_extract(ext);
         if (res < 0) {
-            return -1;
+            return USTB_ERR;
         }
     }
 

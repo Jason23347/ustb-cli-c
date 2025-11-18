@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 
 typedef struct {
@@ -45,8 +46,10 @@ void gbuff_free(gbuff_t *buff);
 void gbuff_clear(gbuff_t *buff);
 /* Append n bytes from src to buff */
 ssize_t gbuff_put(gbuff_t *buff, const void *src, size_t n);
-/* Append formatted string to buff, with ending '\0' */
+/* Append formatted string to buff with ending '\0' */
 int gbuff_appendf(gbuff_t *buff, const char *fmt, ...);
+/* Append src to dest with ending '\0' */
+int gbuff_concat(gbuff_t *dest, const gbuff_t *src);
 
 #define EXT_UNQUOTED 0
 #define EXT_QUOTED   1

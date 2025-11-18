@@ -4,8 +4,11 @@
 #include "config.h"
 
 #include <cargs.h>
-
 #include <stddef.h>
+
+typedef int USTB_RET;
+static inline const USTB_RET USTB_OK = 0;
+static inline const USTB_RET USTB_ERR = -1;
 
 typedef int (*cmd_func_t)(int argc, char **argv);
 

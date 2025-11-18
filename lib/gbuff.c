@@ -133,6 +133,11 @@ gbuff_appendf(gbuff_t *buff, const char *fmt, ...) {
 }
 
 int
+gbuff_concat(gbuff_t *dest, const gbuff_t *src) {
+    return gbuff_appendf(dest, "%.*s", (int)(src->len), src->data);
+}
+
+int
 gbuff_extract(const struct extract *data) {
     int res = 0;
     char dummy[2];

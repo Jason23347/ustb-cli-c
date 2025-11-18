@@ -3,7 +3,7 @@
 #include "cmd.h"
 
 #include <cargs.h>
-
+#include <stdlib.h>
 #include <string.h>
 
 extern const struct cag_option login_options[];
@@ -64,7 +64,7 @@ cag_letter_count(const cag_option *opt) {
     }
 }
 
-static int
+static USTB_RET
 cag_has_value(const cag_option *opt) {
     return (opt->value_name != NULL);
 }
@@ -220,10 +220,10 @@ cmd_completion(int argc, char **argv) {
         completion_zsh_print_function(program);
         printf("compdef _%s %s\n", program, program);
 
-        return 0;
+        return EXIT_SUCCESS;
     } else { /* Other shells */
         fprintf(stderr, "Unsupported shell: %s\n", shell);
 
-        return 1;
+        return EXIT_FAILURE;
     }
 }
