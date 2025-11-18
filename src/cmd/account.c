@@ -363,7 +363,7 @@ cmd_login(int argc, char **argv) {
     if (config->env_filepath == NULL) {
         gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
-        int res = get_defule_env_path(home_str);
+        res = get_defule_env_path(home_str);
         if (res != USTB_OK) {
             return USTB_ERR;
         }
@@ -478,9 +478,7 @@ cmd_whoami(int argc, char **argv) {
             return USTB_ERR;
         }
     }
-    if (res < 0) {
-        return EXIT_FAILURE;
-    }
+
     char nid[MAX_VAR_LEN] = {0};
     {
         const struct extract ext[1] = {{
@@ -494,9 +492,6 @@ cmd_whoami(int argc, char **argv) {
         if (res < 0) {
             return USTB_ERR;
         }
-    }
-    if (res < 0) {
-        return EXIT_FAILURE;
     }
 
     /* GBK → UTF-8 */
@@ -612,10 +607,7 @@ step_out(const char *p, const char *tag_name) {
 static ssize_t
 devices_parse(device_info_t *devices, const char *content, size_t count) {
     size_t i = 0;
-    size_t len;
     const char *p = content;
-    const char *h1, *h2, *h3;
-    const char *t1, *t2, *t3;
 
     p = step_in(p, "tbody");
     if (p == NULL) {
@@ -623,6 +615,9 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
     }
 
     for (i = 0; i < count; i++) {
+        const char *h1, *h2, *h3;
+        const char *t1, *t2, *t3;
+
         device_info_t *device = &devices[i];
 
         p = step_in(p, "tr");
@@ -678,7 +673,7 @@ devices_parse(device_info_t *devices, const char *content, size_t count) {
             }
         }
 
-        len = t1 - h1;
+        size_t len = t1 - h1;
         snprintf(device->ipv4_addr, min(len + 1, sizeof(device->ipv4_addr) - 1),
                  "%s", h1);
 

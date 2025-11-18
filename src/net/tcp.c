@@ -70,7 +70,6 @@ is_ipv6_address(const char *s) {
 /* Get a TCP connection */
 int
 tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
-    int sock_fd = INVALID_SOCKET;
     const char *ip;
     char ip_buf[40];
     int is_ipv6;
@@ -88,7 +87,7 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
     }
 
     socket_init();
-    sock_fd = socket_connect(ip, port, is_ipv6);
+    int sock_fd = socket_connect(ip, port, is_ipv6);
 
     if (sock_fd == INVALID_SOCKET) {
         return -1;

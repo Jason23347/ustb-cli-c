@@ -205,7 +205,7 @@ http_section(const http_t *http, char *buf, size_t maxlen) {
 
     for (line_count = 0; 1; line_count++) {
         size_t len = http_readline(http, p, maxlen - used);
-        if (len <= 0) {
+        if (len == 0) {
             break;
         } else if (len == 2) {
             line_count--;

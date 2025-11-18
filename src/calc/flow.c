@@ -12,11 +12,6 @@
 #define FREE_FLOW_KB   (FREE_FLOW_GB * GB)
 #define MAX_FLOW_SPEED (313 * MB)
 
-static inline size_t
-prev_index(size_t idx) {
-    return (idx == 0) ? (FLOW_NUM - 1) : (idx - 1);
-}
-
 uint64_t
 flow_speed(flow_history_t *history, uint64_t download) {
     // 新元素位置

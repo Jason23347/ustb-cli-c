@@ -146,8 +146,8 @@ cmd_help(int argc, char **argv) {
 }
 
 int
-print_command_help(int argc, char **argv, const struct cag_option *cmd_opts,
-                   size_t cmd_opt_count) {
+print_command_help(int argc, char **argv,
+                   const struct cag_option *cmd_opts, size_t cmd_opt_count) {
     const char *scriptname = argv[0];
     const char *command = argv[1];
 
@@ -282,10 +282,10 @@ cmd_parse(int argc, char **argv) {
     for (size_t i = 0; i < command_count; i++) {
         if (strcmp(command, commands[i].name) == 0) {
             cmd_func_t cmd_func = commands[i].cmd_func;
-            cmd_func_t cmd_help = commands[i].cmd_help;
+            cmd_func_t help_func = commands[i].cmd_help;
             if (global_config.need_help) {
-                if (cmd_help != NULL) {
-                    return (*cmd_help)(argc + 1, argv - 1);
+                if (help_func != NULL) {
+                    return (*help_func)(argc + 1, argv - 1);
                 }
             } else {
                 return (*cmd_func)(argc, argv);

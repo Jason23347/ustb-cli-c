@@ -268,7 +268,7 @@ cmd_fee(int argc, char **argv) {
     }
 
     uint64_t over = flow_over(curr_flow);
-    if (over <= 0) {
+    if (over == 0) {
         fee_format(fee_str, sizeof(fee_str), fee_cost(curr_flow));
         c = cost_color(fee_str);
         printf("Money Cost: ");

@@ -28,8 +28,6 @@ assign_decimal(char *str, size_t maxlen, int64_t number, size_t n) {
     assert(n < 9);
 
     char *s = str;
-    size_t len = strlen(s);
-
     if (number == 0) { // 特例：0 直接返回 "0"
         snprintf(s, maxlen, "0");
         return;
@@ -47,7 +45,7 @@ assign_decimal(char *str, size_t maxlen, int64_t number, size_t n) {
     snprintf(fmt, sizeof(fmt) - 1, "%c0%lu" int64_f, '%', n + 1);
     snprintf(s, maxlen, fmt, number);
 
-    len = strlen(s);
+    size_t len = strlen(s);
     // 小数点后两位向右平移
     s += len - n;
     memmove(s + 1, s, 2);
