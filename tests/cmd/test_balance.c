@@ -3,7 +3,7 @@
 #include "mock/mem.h"
 #include "redirect/redirect_stdout.h"
 
-#include "cmd.h"
+#include "cmd/cmd.h"
 
 #include <string.h>
 
