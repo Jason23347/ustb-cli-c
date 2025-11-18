@@ -465,34 +465,10 @@ cmd_whoami(int argc, char **argv) {
     }
 
     char username[MAX_VAR_LEN] = {0};
-    {
-        const struct extract ext[1] = {{
-            .dest = username,
-            .src = content,
-            .fmt = &gbuff_from_const("%[^'\"]s"),
-            .prefix = &gbuff_from_const("uid"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
+    info_extract(username, content, "%[^'\"]s", "uid", EXT_QUOTED);
 
     char nid[MAX_VAR_LEN] = {0};
-    {
-        const struct extract ext[1] = {{
-            .dest = nid,
-            .src = content,
-            .fmt = &gbuff_from_const("%[^'\"]s"),
-            .prefix = &gbuff_from_const("NID"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
+    info_extract(nid, content, "%[^'\"]s", "NID", EXT_QUOTED);
 
     /* GBK → UTF-8 */
     gbuff_t nid_str[1] = {{
@@ -518,46 +494,35 @@ cmd_whoami(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+static int
+extract_trytimes(const char *content) {
+    int res;
+    char buf[MAX_VAR_LEN];
+    const struct extract ext[1] = {{
+        .dest = buf,
+        .src = content,
+        .fmt = &gbuff_from_const("%[^'\"]"),
+        .prefix = &gbuff_from_const("trytimes"),
+        .quoted = EXT_QUOTED,
+    }};
+    res = gbuff_extract(ext);
+    if (res < 0) {
+        return 0;
+    } else if (strcmp(buf, "null") == 0) {
+        return 0;
+    } else { /* 假设 trytimes < 10 */
+        return buf[0] - '0';
+    }
+}
+
 static USTB_RET
 device_get_form(device_form_t *form, http_t *http, const account_t *account) {
-    int res;
-
     const char *content =
         http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
 
-    {
-        const struct extract ext[1] = {{
-            .dest = form->checkcode,
-            .src = content,
-            .fmt = &gbuff_from_const("%[^'\"]"),
-            .prefix = &gbuff_from_const("checkcode"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
+    info_extract(form->checkcode, content, "%[^'\"]", "checkcode", EXT_QUOTED);
 
-    {
-        char buf[MAX_VAR_LEN];
-        const struct extract ext[1] = {{
-            .dest = buf,
-            .src = content,
-            .fmt = &gbuff_from_const("%[^'\"]"),
-            .prefix = &gbuff_from_const("trytimes"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            form->trytimes = 0;
-        }
-        if (strcmp(buf, "null") == 0) {
-            form->trytimes = 0;
-        } else { /* 假设 trytimes < 10 */
-            form->trytimes = buf[0] - '0';
-        }
-    }
+    form->trytimes = extract_trytimes(content);
 
     if (form->trytimes >= 3) {
         return USTB_ERR;

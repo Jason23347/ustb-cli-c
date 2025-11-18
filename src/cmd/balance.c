@@ -36,94 +36,16 @@ logged_in(const char *content) {
 
 static USTB_RET
 info_fetch(info_t *info, const char *content) {
-    int res;
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->curr_flow,
-            .src = content,
-            .fmt = &gbuff_from_const(uint64_spec),
-            .prefix = &gbuff_from_const("flow"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->curr_flow_v6,
-            .src = content,
-            .fmt = &gbuff_from_const(uint64_spec),
-            .prefix = &gbuff_from_const("v6df"),
-            .quoted = EXT_UNQUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->ipv6_mode,
-            .src = content,
-            .fmt = &gbuff_from_const("%u"),
-            .prefix = &gbuff_from_const("v46m"),
-            .quoted = EXT_UNQUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->fee,
-            .src = content,
-            .fmt = &gbuff_from_const("%u"),
-            .prefix = &gbuff_from_const("fee"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
+    info_extract(&info->curr_flow, content, uint64_spec, "flow", EXT_QUOTED);
+    info_extract(&info->curr_flow_v6, content, uint64_spec, "v6df",
+                 EXT_UNQUOTED);
+    info_extract(&info->ipv6_mode, content, "%u", "v46m", EXT_UNQUOTED);
+    info_extract(&info->fee, content, "%u", "fee", EXT_QUOTED);
+    info_extract(&info->ipv4_addr, content, "%15[^']", "v4ip", EXT_QUOTED);
+    info_extract(&info->ipv6_addr, content, "%39[^']", "v6ip", EXT_QUOTED);
 
     /* FIXME: Don't know why */
     info->curr_flow_v6 /= 4;
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->ipv4_addr,
-            .src = content,
-            .fmt = &gbuff_from_const("%15[^']"),
-            .prefix = &gbuff_from_const("v4ip"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &info->ipv6_addr,
-            .src = content,
-            .fmt = &gbuff_from_const("%39[^']"),
-            .prefix = &gbuff_from_const("v6ip"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
 
     return USTB_OK;
 }
@@ -209,14 +131,13 @@ cmd_info(int argc, char **argv) {
 
 int
 cmd_fee(int argc, char **argv) {
-    int res;
     int c;
     uint64_t curr_flow;
     uint64_t fee_num;
     char fee_str[16];
 
     http_t *http = alloca(HTTP_T_SIZE);
-    res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
     if (res != 0) {
         return EXIT_FAILURE;
     }
@@ -239,33 +160,8 @@ cmd_fee(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    {
-        const struct extract ext[1] = {{
-            .dest = &curr_flow,
-            .src = content,
-            .fmt = &gbuff_from_const(uint64_spec),
-            .prefix = &gbuff_from_const("flow"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
-
-    {
-        const struct extract ext[1] = {{
-            .dest = &fee_num,
-            .src = content,
-            .fmt = &gbuff_from_const("%u"),
-            .prefix = &gbuff_from_const("fee"),
-            .quoted = EXT_QUOTED,
-        }};
-        res = gbuff_extract(ext);
-        if (res < 0) {
-            return USTB_ERR;
-        }
-    }
+    info_extract(&curr_flow, p, uint64_spec, "flow", EXT_QUOTED);
+    info_extract(&fee_num, p, "%u", "fee", EXT_QUOTED);
 
     uint64_t over = flow_over(curr_flow);
     if (over == 0) {

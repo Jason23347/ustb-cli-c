@@ -6,6 +6,21 @@
 #include <cargs.h>
 #include <stddef.h>
 
+#define info_extract(destPtr, srcStr, fmtStr, prefixStr, extQuoted)            \
+    do {                                                                       \
+        const struct extract ext[1] = {{                                       \
+            .dest = (destPtr),                                                 \
+            .src = (srcStr),                                                   \
+            .fmt = &gbuff_from_const(fmtStr),                                  \
+            .prefix = &gbuff_from_const(prefixStr),                            \
+            .quoted = extQuoted,                                               \
+        }};                                                                    \
+        int res = gbuff_extract(ext);                                          \
+        if (res < 0) {                                                         \
+            return USTB_ERR;                                                   \
+        }                                                                      \
+    } while (0)
+
 typedef int USTB_RET;
 static const USTB_RET USTB_OK = 0;
 static const USTB_RET USTB_ERR = -1;

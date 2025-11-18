@@ -251,24 +251,12 @@ static USTB_RET
 http_get_flow(http_t *http, uint64_t *flow) {
     assert(flow != NULL);
 
-    int res;
-
     const char *content = http_get_root(http);
     if (content == NULL) {
         return USTB_ERR;
     }
 
-    const struct extract ext[1] = {{
-        .dest = flow,
-        .src = content,
-        .fmt = &gbuff_from_const(uint64_spec),
-        .prefix = &gbuff_from_const("flow"),
-        .quoted = EXT_QUOTED,
-    }};
-    res = gbuff_extract(ext);
-    if (res < 0) {
-        return USTB_ERR;
-    }
+    info_extract(flow, content, uint64_spec, "flow", EXT_QUOTED);
 
     return USTB_OK;
 }
