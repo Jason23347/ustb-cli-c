@@ -261,8 +261,6 @@ http_find_header(const http_t *http, const char *header) {
 
 int
 http_is_chuncked(const http_t *http) {
-    const char **headers = http->headers->list;
-
     const char transfer_encoding[] = "transfer-encoding:";
     const char *header_value = http_find_header(http, transfer_encoding);
 

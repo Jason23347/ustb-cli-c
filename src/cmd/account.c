@@ -351,7 +351,6 @@ int
 cmd_login(int argc, char **argv) {
     int res;
     char ipv6_buf[40];
-    char filepath_buf[MAX_PATH_LEN];
     login_t config[1] = {0};
 
     // Get username & password & other things

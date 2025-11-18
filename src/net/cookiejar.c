@@ -101,8 +101,6 @@ int
 cookiejar_resolve(cookiejar_t *cookiejar, const char **headers, size_t count) {
     const char set_cookie[] = "set-cookie:";
     size_t slen = strlen(set_cookie);
-    const char **head;
-    size_t left = count;
 
     for (size_t i = 0; i < count; i++) {
         const char *line = headers[i];
