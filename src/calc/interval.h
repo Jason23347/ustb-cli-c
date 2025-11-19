@@ -1,5 +1,5 @@
-#ifndef CALC_TIME_H
-#define CALC_TIME_H
+#ifndef CALC_INTERVAL_H
+#define CALC_INTERVAL_H
 
 #include <stdint.h>
 #include <sys/time.h>
@@ -11,4 +11,4 @@ double micro2sec(suseconds_t microsec);
 double speed_per_sec(uint64_t flowKB, suseconds_t microsec);
 double random_d();
 
-#endif /* CALC_TIME_H */
+#endif /* CALC_INTERVAL_H */

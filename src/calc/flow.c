@@ -2,8 +2,8 @@
 
 #include "flow.h"
 
+#include "interval.h"
 #include "terminal.h"
-#include "timer.h"
 
 #include <stdio.h>
 #include <string.h>

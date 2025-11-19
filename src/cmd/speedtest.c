@@ -3,7 +3,7 @@
 #include "cmd.h"
 
 #include "calc/flow.h"
-#include "calc/timer.h"
+#include "calc/interval.h"
 #include "net/http.h"
 #include "terminal.h"
 

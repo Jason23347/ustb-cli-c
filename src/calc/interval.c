@@ -1,4 +1,4 @@
-#include "timer.h"
+#include "interval.h"
 
 #include <stdlib.h>
 
