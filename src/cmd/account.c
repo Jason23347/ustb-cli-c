@@ -342,7 +342,7 @@ login_request(const gbuff_t *path) {
         return USTB_ERR;
     }
 
-    debug("%s\n", content);
+    print_log(DEBUG, "%s\n", content);
 
     return USTB_OK;
 }

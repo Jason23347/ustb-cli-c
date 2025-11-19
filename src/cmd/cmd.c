@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 extern int print_default_help(int argc, char **argv);
 extern int print_login_help(int argc, char **argv);
@@ -112,6 +113,13 @@ const struct cag_option global_options[] = {
         .value_name = NULL,
         .description = "Print command help message",
     },
+    {
+        .identifier = 'o',
+        .access_letters = "o",
+        .access_name = "log-file",
+        .value_name = "FILE",
+        .description = "Print to file",
+    },
 #ifdef WITH_COLOR
     {
         .identifier = 'r',
@@ -146,8 +154,8 @@ cmd_help(int argc, char **argv) {
 }
 
 int
-print_command_help(int argc, char **argv,
-                   const struct cag_option *cmd_opts, size_t cmd_opt_count) {
+print_command_help(int argc, char **argv, const struct cag_option *cmd_opts,
+                   size_t cmd_opt_count) {
     const char *scriptname = argv[0];
     const char *command = argv[1];
 
@@ -252,6 +260,30 @@ global_config_parse(int argc, char **argv) {
         case 'h':
             global_config.need_help = 1;
             arg_idx[argc_remove++] = idx;
+            break;
+        case 'o':
+            const char *filename = cag_option_get_value(&context);
+            if ((filename != NULL) && (filename[0] != '\0')) {
+                // If file does not exist, try to create it.
+                if (access(filename, F_OK) != 0) {
+                    FILE *file = fopen(filename, "w");
+                    if (file == NULL) {
+                        fprintf(stderr, "Cannot create log file: \"%s\"\n",
+                                filename);
+                        exit(EXIT_FAILURE);
+                    }
+                    fclose(file);
+                }
+                FILE *file = fopen(filename, "a");
+                if (file == NULL) {
+                    fprintf(stderr, "Cannot open log file: \"%s\"\n", filename);
+                    exit(EXIT_FAILURE);
+                }
+                log_set_file(file);
+            }
+
+            arg_idx[argc_remove++] = idx;
+
             break;
         case '?':
             break;

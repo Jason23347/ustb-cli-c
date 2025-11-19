@@ -23,7 +23,7 @@
 #define uint64_spec "%llu"
 #endif /* __WORDSIZE */
 
-#define debug(...) ((void)0)
+#define print_log(DEBUG, ...) ((void)0)
 
 static inline int
 cmd_parse(int argc, char **argv) {

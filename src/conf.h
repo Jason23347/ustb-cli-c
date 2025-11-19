@@ -3,6 +3,7 @@
 
 #include "config.h"
 
+#include <stdio.h>
 #include <sys/types.h>
 
 #if __WORDSIZE == 64
@@ -11,15 +12,18 @@
 #define uint64_spec "%llu"
 #endif /* __WORDSIZE */
 
-#ifndef NDEBUG
+enum LOG_LEVEL {
+    SILENT = 0,
+    ERROR = 1,
+    WARNING = 2,
+    INFO = 3,
+    DEBUG = 4,
+};
 
-#define debug(fmt, ...) debugf("%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
-
-int debugf(const char *fmt, ...);
-
-#else
-#define debug(...)
-#endif /* NDEBUG */
+void log_init(void) __attribute__((constructor));
+void log_set_file(FILE *file);
+void log_set_level(enum LOG_LEVEL level);
+int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 
 #define LOGIN_HOST              "202.204.48.82"
 #define LOGIN_PORT              80
