@@ -91,9 +91,9 @@ flow_left(uint64_t flowKB) {
 uint64_t
 flow_over(uint64_t flowKB) {
     if (flowKB > FREE_FLOW_KB) {
-        return 0;
-    } else {
         return (flowKB - FREE_FLOW_KB);
+    } else {
+        return 0;
     }
 }
 

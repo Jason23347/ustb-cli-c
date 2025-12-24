@@ -51,11 +51,10 @@ assign_decimal(char *str, size_t maxlen, int64_t number, size_t n) {
 
 unsigned
 fee_cost(uint64_t flowKB) {
-    uint64_t left = flow_left(flowKB);
+    uint64_t overKB = flow_over(flowKB);
 
-    left /= MB;
-    if (left > 0) {
-        return (FEE_PER_1000GB * MB) / left;
+    if (overKB > 0) {
+        return (FEE_PER_1000GB) * (overKB / GB);
     } else {
         return 0;
     }

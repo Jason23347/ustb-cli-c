@@ -163,8 +163,7 @@ cmd_fee(int argc, char **argv) {
     info_extract(&curr_flow, p, uint64_spec, "flow", EXT_QUOTED);
     info_extract(&fee_num, p, "%u", "fee", EXT_QUOTED);
 
-    uint64_t over = flow_over(curr_flow);
-    if (over == 0) {
+    if (flow_over(curr_flow) > 0) {
         fee_format(fee_str, sizeof(fee_str), fee_cost(curr_flow));
         c = cost_color(fee_str);
         printf("Money Cost: ");
