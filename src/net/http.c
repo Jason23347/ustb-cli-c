@@ -29,6 +29,10 @@ typedef struct http {
     tcp_t conn;
     cookiejar_t *cookiejar;
 
+#ifdef USE_OPENSSL
+    int use_ssl;
+#endif
+
     // Results
     int status_code;
     http_headers_t headers[1];
@@ -45,7 +49,22 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     http->port = port;
     http->http_mode = http_mode;
 
-    http->conn = (tcp_t){INVALID_SOCKET};
+    http->conn.fd = INVALID_SOCKET;
+#ifdef USE_OPENSSL
+    http->conn.ssl_ctx = NULL;
+    http->conn.ssl = NULL;
+    http->use_ssl = 0;
+
+    // 如果端口是 443 或设置了 HTTPS 标志，则使用 SSL
+    if (port == 443 || (http_mode & HTTP_SSL) != 0) {
+        http->use_ssl = 1;
+
+        // 初始化 SSL 上下文
+        if (ssl_init(&http->conn) != 0) {
+            goto fail;
+        }
+    }
+#endif
 
     if ((http_mode & HTTP_COOKIEJAR) != 0) {
         cookiejar_t *cookiejar = cookiejar_init(MAX_COOKIEJAR_SIZE);
@@ -64,6 +83,9 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     return 0;
 
 fail:
+#ifdef USE_OPENSSL
+    ssl_free(&http->conn);
+#endif
     return -1;
 }
 
@@ -73,6 +95,9 @@ http_free(http_t *http) {
         cookiejar_free(http->cookiejar);
     }
     gbuff_free(http->body);
+#ifdef USE_OPENSSL
+    ssl_free(&http->conn);
+#endif
 }
 
 int
@@ -82,6 +107,17 @@ http_connect(http_t *http) {
     if (res != 0) {
         return -1;
     }
+
+#ifdef USE_OPENSSL
+    // 如果启用了 SSL，执行 SSL 握手
+    if (http->use_ssl) {
+        res = ssl_connect(&http->conn, http->domain);
+        if (res != 0) {
+            tcp_close(&http->conn);
+            return -1;
+        }
+    }
+#endif
 
     return 0;
 }
@@ -113,7 +149,7 @@ http_send_request(const http_t *http, const gbuff_t *path,
         gbuff_appendf(req, "Content-Length: %d\r\n", data->len);
     }
     /* Host请求头是增加幸福感的关键，不能删掉 */
-    if (http->port != 80) {
+    if (http->port != 80 && http->port != 443) {
         gbuff_appendf(req, "Host: %s:%u\r\n", http->domain, http->port);
     } else {
         gbuff_appendf(req, "Host: %s\r\n", http->domain);

@@ -6,6 +6,8 @@
 
 /* CookieJar flag */
 #define HTTP_COOKIEJAR 4
+/* HTTPS flag */
+#define HTTP_SSL 8
 #define MAX_BUF_SIZE   4096
 
 typedef struct http http_t;

@@ -28,6 +28,7 @@ option(WITH_SPEEDTEST "Enable speedtest features: speedtest, monitor" ON)
 option(WITH_COMPLETION "Enable completion features: completion" OFF)
 set(GB2312_DECODER "iconv" CACHE STRING "Select GB2312 decoding method: iconv, builtin, or disabled")
 set_property(CACHE GB2312_DECODER PROPERTY STRINGS "iconv" "builtin" "disabled")
+set(OPENSSL_ROOT_DIR "" CACHE PATH "OpenSSL root directory (optional)")
 
 message(STATUS "GB2312 decoder selected: ${GB2312_DECODER}")
 
@@ -52,7 +53,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Source files
 #---------------------------------------
 file(GLOB SRC_FILES
-    lib/*.c
+    lib/decode.c
+    lib/gbuff.c
     src/*.c
     src/calc/*.c
     src/cmd/*.c
@@ -72,6 +74,84 @@ find_package(Iconv REQUIRED)
 ENDIF()
 find_package(Threads REQUIRED)
 target_link_libraries(ustb-cli PRIVATE Threads::Threads)
+
+#---------------------------------------
+# OpenSSL
+#---------------------------------------
+set(OpenSSL_FOUND FALSE)
+
+if(OPENSSL_ROOT_DIR)
+    # 用户指定了 OpenSSL 路径
+    set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}")
+    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+    # 同时查找 lib 和 lib64 目录
+    set(OPENSSL_LIB_PATHS
+        "${OPENSSL_ROOT_DIR}/lib64"
+        "${OPENSSL_ROOT_DIR}/lib"
+    )
+    find_library(OPENSSL_SSL_LIBRARY
+        NAMES ssl libssl
+        PATHS ${OPENSSL_LIB_PATHS}
+        NO_DEFAULT_PATH
+    )
+    find_library(OPENSSL_CRYPTO_LIBRARY
+        NAMES crypto libcrypto
+        PATHS ${OPENSSL_LIB_PATHS}
+        NO_DEFAULT_PATH
+    )
+    find_path(OPENSSL_INCLUDE_DIR
+        NAMES openssl/ssl.h
+        PATHS "${OPENSSL_INCLUDE_DIR}"
+        NO_DEFAULT_PATH
+    )
+    if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY AND OPENSSL_INCLUDE_DIR)
+        message(STATUS "Found OpenSSL: ${OPENSSL_ROOT_DIR}")
+        message(STATUS "  SSL Library: ${OPENSSL_SSL_LIBRARY}")
+        message(STATUS "  Crypto Library: ${OPENSSL_CRYPTO_LIBRARY}")
+        message(STATUS "  Include Directory: ${OPENSSL_INCLUDE_DIR}")
+        add_definitions(-DUSE_OPENSSL)
+        target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(ustb-cli PRIVATE ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+        set(OpenSSL_FOUND TRUE)
+    else()
+        message(WARNING "OpenSSL not found at ${OPENSSL_ROOT_DIR}, HTTPS support will be disabled")
+        if(NOT OPENSSL_SSL_LIBRARY)
+            message(WARNING "  SSL library not found in ${OPENSSL_LIB_PATHS}")
+        endif()
+        if(NOT OPENSSL_CRYPTO_LIBRARY)
+            message(WARNING "  Crypto library not found in ${OPENSSL_LIB_PATHS}")
+        endif()
+        if(NOT OPENSSL_INCLUDE_DIR)
+            message(WARNING "  Include directory not found at ${OPENSSL_INCLUDE_DIR}")
+        endif()
+    endif()    
+else()
+    find_package(OpenSSL QUIET)
+    if(OpenSSL_FOUND)
+        message(STATUS "Found OpenSSL: ${OPENSSL_VERSION}")
+        message(STATUS "  SSL Library: ${OPENSSL_SSL_LIBRARY}")
+        message(STATUS "  Crypto Library: ${OPENSSL_CRYPTO_LIBRARY}")
+        message(STATUS "  Include Directory: ${OPENSSL_INCLUDE_DIR}")
+        add_definitions(-DUSE_OPENSSL)
+        target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(ustb-cli PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    else()
+        message(STATUS "OpenSSL not found, HTTPS support will be disabled")
+        message(STATUS "OpenSSL not found, command devices will be disabled")
+        message(STATUS "  To enable HTTPS, install OpenSSL or set OPENSSL_ROOT_DIR")
+    endif()
+endif()
+
+#---------------------------------------
+# Hash library
+#---------------------------------------
+# Use md5.c if no openssl, else use md5_openssl.c
+if(OpenSSL_FOUND)
+    target_sources(ustb-cli PRIVATE lib/md5_openssl.c)
+    target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
+else()
+    target_sources(ustb-cli PRIVATE lib/md5.c)
+endif()
 
 #---------------------------------------
 # Subdirectories
