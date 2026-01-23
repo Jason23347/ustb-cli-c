@@ -39,8 +39,9 @@ typedef struct {
 } account_t;
 
 typedef struct device_info {
+    char login_time[20]; // YYYY-MM-DD HH:MM:SS
     char ipv4_addr[16];
-    char ipv6_addr[40];
+    // char ipv6_addr[40]; // deprecated
     char mac[MAC_FORMATTED_LEN + 1];
 } device_info_t;
 
@@ -53,11 +54,12 @@ typedef struct device {
 } device_t;
 
 typedef struct {
-    char *account;
-    char pw_hash[MD5_LEN];
-    char checkcode[5];
-    char *submit;
-    int trytimes;
+    char *foo;              // username
+    char *bar;              // password
+    char checkcode[5];      // 4 number + '\0'
+    char *account;          // username again?
+    char password[MD5_LEN]; // password hash
+    char *code;             // empty string
 } device_form_t;
 
 typedef struct whoami {
@@ -494,180 +496,73 @@ cmd_whoami(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-static int
-extract_trytimes(const char *content) {
-    int res;
-    char buf[MAX_VAR_LEN];
-    const struct extract ext[1] = {{
-        .dest = buf,
-        .src = content,
-        .fmt = &gbuff_from_const("%[^'\"]"),
-        .prefix = &gbuff_from_const("trytimes"),
-        .quoted = EXT_QUOTED,
-    }};
-    res = gbuff_extract(ext);
-    if (res < 0) {
-        return 0;
-    } else if (strcmp(buf, "null") == 0) {
-        return 0;
-    } else { /* 假设 trytimes < 10 */
-        return buf[0] - '0';
-    }
-}
-
 static USTB_RET
 device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     const char *content =
         http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
 
-    info_extract(form->checkcode, content, "%[^'\"]", "checkcode", EXT_QUOTED);
-
-    form->trytimes = extract_trytimes(content);
-
-    if (form->trytimes >= 3) {
-        return USTB_ERR;
-    }
-
-    form->account = account->username->data;
-    md5(form->pw_hash, account->password->data);
-    /* 登[空格]录 */
-    form->submit = "\%E7\%99\%BB+\%E5\%BD\%95";
+    form->foo = account->username->data;
+    form->bar = account->password->data;
+    info_extract(form->checkcode, content, "%[^'\"]", "value", EXT_QUOTED);
+    form->account = form->foo;
+    md5(form->password, account->password->data);
+    form->code = "";
 
     return USTB_OK;
 }
 
 static char *
-step_in(const char *p, const char *tag_name) {
+step_in(const char *p) {
     char *pos;
-    const char br_left = '<', br_right = '>';
 
-    gbuff_t tag[1] = {gbuff_alloca(strlen(tag_name) + 2)};
-    gbuff_appendf(tag, "%c%s", br_left, tag_name);
-
-    /* <tag_name ...> */
-    pos = strstr(p, tag->data);
+    pos = strchr(p, '{');
     if (pos == NULL) {
         return NULL;
     }
-    pos = strchr(pos, br_right);
     return (pos + 1);
 }
 
 static char *
-step_out(const char *p, const char *tag_name) {
+step_out(const char *p) {
     char *pos;
-    const char br_left = '<', br_right = '>';
 
-    gbuff_t tag[1] = {gbuff_alloca(strlen(tag_name) + 4)};
-    gbuff_appendf(tag, "%c/%s%c", br_left, tag_name, br_right);
-
-    /* </tag_name ...> */
-    pos = strstr(p, tag->data);
+    pos = strchr(p, '}');
     if (pos == NULL) {
         return NULL;
     }
-    return (pos + tag->len);
+    return (pos + 1);
 }
 
+// Returns number of parsed devices, or -1 on error
 static ssize_t
 devices_parse(device_info_t *devices, const char *content, size_t count) {
+    print_log(DEBUG, "%s\n", content);
+
     size_t i = 0;
     const char *p = content;
 
-    p = step_in(p, "tbody");
-    if (p == NULL) {
-        return -1;
-    }
-
     for (i = 0; i < count; i++) {
-        const char *h1, *h2, *h3;
-        const char *t1, *t2, *t3;
-
+        const char *s;
         device_info_t *device = &devices[i];
 
-        p = step_in(p, "tr");
+        p = step_in(p);
         if (p == NULL) {
             break;
         }
+        /* Login time */
+        s = strstr(p, "\"loginTime\":\"");
+        sscanf(s, "\"loginTime\":\"%[^'\"]s\"", device->login_time);
+        /* IPV4 address */
+        s = strstr(p, "\"ip\":\"");
+        sscanf(s, "\"ip\":\"%[^'\"]s\"", device->ipv4_addr);
+        /* MAC address */
+        s = strstr(p, "\"mac\":\"");
+        sscanf(s, "\"mac\":\"%[^'\"]s\"", device->mac);
 
-        /* 1st col: IPV4 address */
-        p = step_in(p, "td");
+        p = step_out(p);
         if (p == NULL) {
-            return -1;
+            break;
         }
-        h1 = p;
-        p = step_out(p, "td");
-        if (p == NULL) {
-            return -1;
-        }
-
-        /* 2nd col: IPV6 address */
-        p = step_in(p, "td");
-        if (p == NULL) {
-            return -1;
-        }
-        h2 = p;
-        p = step_out(p, "td");
-        if (p == NULL) {
-            return -1;
-        }
-
-        /* 3rd col: MAC address */
-        p = step_in(p, "td");
-        if (p == NULL) {
-            return -1;
-        }
-        h3 = p;
-        p = step_out(p, "td");
-        if (p == NULL) {
-            return -1;
-        }
-
-        p = step_out(p, "tr");
-        if (p == NULL) {
-            return -1;
-        }
-
-        /* 1st col: IPV4 address */
-        t1 = strchr(h1, '&');
-        if (t1 == NULL) {
-            const char stop[] = " <\r\n";
-            t1 = strpbrk(h1, stop);
-            if (t1 == NULL) {
-                return -1;
-            }
-        }
-
-        size_t len = t1 - h1;
-        snprintf(device->ipv4_addr, min(len + 1, sizeof(device->ipv4_addr) - 1),
-                 "%s", h1);
-
-        /* 2nd col: IPV6 address */
-        t2 = strchr(h2, '&');
-        if (t2 == NULL) {
-            const char stop[] = " <\r\n";
-            t2 = strpbrk(h2, stop);
-            if (t2 == NULL) {
-                return -1;
-            }
-        }
-
-        len = t2 - h2;
-        snprintf(device->ipv6_addr, min(len + 1, sizeof(device->ipv6_addr) - 1),
-                 "%s", h2);
-
-        /* 3rd col: MAC address */
-        t3 = strchr(h3, '&');
-        if (t3 == NULL) {
-            const char stop[] = " <\r\n";
-            t3 = strpbrk(h3, stop);
-            if (t3 == NULL) {
-                return -1;
-            }
-        }
-
-        len = t3 - h3;
-        snprintf(device->mac, min(len + 1, sizeof(device->mac) - 1), "%s", h3);
     }
 
     return i;
@@ -724,7 +619,7 @@ devices_login(http_t *http, const account_t *account) {
     const char *content;
     device_form_t form[1];
 
-    // 1. Get checkcode & trytime
+    // 1. Get checkcode
     content = http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
     if (content == NULL) {
         return USTB_ERR;
@@ -740,8 +635,10 @@ devices_login(http_t *http, const account_t *account) {
 
     // 3. login request
     gbuff_t data[1] = {gbuff_alloca(MAX_PATH_LEN)};
-    gbuff_appendf(data, "account=%s&password=%s&code=&checkcode=%s&Submit=%s",
-                  form->account, form->pw_hash, form->checkcode, form->submit);
+    gbuff_appendf(data,
+                  "foo=%s&bar=%s&checkcode=%s&account=%s&password=%s&code=%s",
+                  form->foo, form->bar, form->checkcode, form->account,
+                  form->password, form->code);
     content = http_request(http, &gbuff_from_const(DRCOM_LOGIN_PATH), data);
 
     return USTB_OK;
@@ -783,13 +680,13 @@ devices_output(device_t *config, device_info_t *devices, size_t device_count) {
     const char *body_format;
 
     if (config->output_markdown) {
-        header_format = "| %-15s | %-39s | %-17s |\n| :-------------- | "
+        header_format = "| %-20s | %-15s | %-17s |\n| :-------------- | "
                         ":-------------------------------------- | "
                         ":---------------- |\n";
-        body_format = "| %-15s | %-39s | %-17s |\n";
+        body_format = "| %-20s | %-15s | %-17s |\n";
     } else {
-        header_format = "%-15s %-39s %s\n";
-        body_format = "%-15s %-39s %-17s\n";
+        header_format = "%-20s %-15s %s\n";
+        body_format = "%-20s %-15s %-17s\n";
     }
 
     if (config->watch_mode) {
@@ -803,10 +700,10 @@ devices_output(device_t *config, device_info_t *devices, size_t device_count) {
         devices_format_mac(devices, device_count);
     }
 
-    printf(header_format, "IPV4 Address", "IPV6 Address", "MAC");
+    printf(header_format, "Login Time", "IPV4 Address", "MAC");
     for (size_t i = 0; i < device_count; i++) {
         device_info_t device = devices[i];
-        printf(body_format, device.ipv4_addr, device.ipv6_addr, device.mac);
+        printf(body_format, device.login_time, device.ipv4_addr, device.mac);
     }
     for (size_t i = device_count; i < MAX_ONLINE_DEVICE_COUNT; i++) {
         for (int j = 0; j < 82; j++) {
@@ -870,7 +767,8 @@ cmd_devices(int argc, char **argv) {
 
     // Init HTTP
     http_t *http = alloca(HTTP_T_SIZE);
-    res = http_init(http, DRCOM_HOST, DRCOM_PORT, IPV4_ONLY | HTTP_COOKIEJAR);
+    res = http_init(http, DRCOM_HOST, DRCOM_PORT,
+                    IPV4_ONLY | HTTP_COOKIEJAR | HTTP_SSL);
     if (res != 0) {
         return EXIT_FAILURE;
     }

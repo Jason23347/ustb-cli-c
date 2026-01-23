@@ -52,13 +52,15 @@ const struct cmd_option commands[] = {
     },
 #endif
 #ifdef WITH_ACCOUNT
+#ifndef USE_SSL
     {
         .name = "devices",
         .description = "Show online devices",
         .cmd_func = &cmd_devices,
         .cmd_help = &print_devices_help,
     },
-#endif
+#endif // USE_SSL
+#endif // WITH_ACCOUNT
 #ifdef WITH_BALANCE
     {
         .name = "info",
