@@ -32,7 +32,7 @@ int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 #define CIPPV6_PORT             80
 #define CIPPV6_PATH             "/get_ip.php"
 #define SPEEDTEST_DOMAIN        "speed.ustb.edu.cn"
-#define SPEEDTEST_PORT          80
+#define SPEEDTEST_PORT          443
 #define SPEEDTEST_UPLOAD_PATH   "/backend/empty.php"
 #define SPEEDTEST_DOWNLOAD_PATH "/backend/garbage.php"
 #define DRCOM_HOST              "zifuwu.ustb.edu.cn"
