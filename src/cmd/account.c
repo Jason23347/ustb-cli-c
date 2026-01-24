@@ -680,9 +680,8 @@ devices_output(device_t *config, device_info_t *devices, size_t device_count) {
     const char *body_format;
 
     if (config->output_markdown) {
-        header_format = "| %-20s | %-15s | %-17s |\n| :-------------- | "
-                        ":-------------------------------------- | "
-                        ":---------------- |\n";
+        header_format = "| %-20s | %-15s | %-17s |\n"
+                        "| :------------------- | :-------------- | :---------------- |\n";
         body_format = "| %-20s | %-15s | %-17s |\n";
     } else {
         header_format = "%-20s %-15s %s\n";
