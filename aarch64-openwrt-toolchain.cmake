@@ -2,7 +2,7 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
 set(TOOLCHAIN_DIR "$ENV{STAGING_DIR}/toolchain-aarch64_generic_gcc-13.3.0_musl")
-set(TARGET_DIR "$ENV{STAGING_DIR}/target-aarch64_cortex-a53_musl")
+set(TARGET_DIR "$ENV{STAGING_DIR}/target-aarch64_generic_musl")
 
 set(CMAKE_SYSROOT "${TARGET_DIR}")
 set(CMAKE_FIND_ROOT_PATH "${TARGET_DIR}")
