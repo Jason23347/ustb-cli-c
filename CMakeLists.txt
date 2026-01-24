@@ -82,7 +82,7 @@ set(OpenSSL_FOUND FALSE)
 
 if(OPENSSL_ROOT_DIR)
     # 用户指定了 OpenSSL 路径，使用 pkg-config 查找
-    set(ENV{PKG_CONFIG_PATH} "${OPENSSL_ROOT_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${OPENSSL_ROOT_DIR}/lib64/pkgconfig:${OPENSSL_ROOT_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)
         pkg_check_modules(OPENSSL libssl libcrypto)
@@ -95,14 +95,16 @@ if(OPENSSL_ROOT_DIR)
             # Always include the OpenSSL include directory, even if pkg-config doesn't report it
             target_include_directories(ustb-cli PRIVATE ${OPENSSL_ROOT_DIR}/include ${OPENSSL_INCLUDE_DIRS})
             target_link_libraries(ustb-cli PRIVATE ${OPENSSL_LIBRARIES})
-            target_link_directories(ustb-cli PRIVATE ${OPENSSL_ROOT_DIR}/lib ${OPENSSL_LIBRARY_DIRS})
+            target_link_directories(ustb-cli PRIVATE ${OPENSSL_ROOT_DIR}/lib64 ${OPENSSL_ROOT_DIR}/lib ${OPENSSL_LIBRARY_DIRS})
             set(OpenSSL_FOUND TRUE)
         else()
-            message(WARNING "OpenSSL not found via pkg-config at ${OPENSSL_ROOT_DIR}")
+            message(WARNING "OpenSSL not found via pkg-config at ${OPENSSL_ROOT_DIR}, trying manual search...")
         endif()
-    else()
-        # Fallback to manual search if pkg-config not available
-        set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}")
+    endif()
+
+    # 如果pkg-config失败，使用手动查找
+    if(NOT OpenSSL_FOUND)
+        # Fallback to manual search
         set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
         # 同时查找 lib 和 lib64 目录
         set(OPENSSL_LIB_PATHS
@@ -121,11 +123,11 @@ if(OPENSSL_ROOT_DIR)
         )
         find_path(OPENSSL_INCLUDE_DIR
             NAMES openssl/ssl.h
-            PATHS "${OPENSSL_INCLUDE_DIR}"
+            PATHS "${OPENSSL_ROOT_DIR}/include"
             NO_DEFAULT_PATH
         )
         if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY AND OPENSSL_INCLUDE_DIR)
-            message(STATUS "Found OpenSSL: ${OPENSSL_ROOT_DIR}")
+            message(STATUS "Found OpenSSL via manual search: ${OPENSSL_ROOT_DIR}")
             message(STATUS "  SSL Library: ${OPENSSL_SSL_LIBRARY}")
             message(STATUS "  Crypto Library: ${OPENSSL_CRYPTO_LIBRARY}")
             message(STATUS "  Include Directory: ${OPENSSL_INCLUDE_DIR}")
@@ -142,7 +144,7 @@ if(OPENSSL_ROOT_DIR)
                 message(WARNING "  Crypto library not found in ${OPENSSL_LIB_PATHS}")
             endif()
             if(NOT OPENSSL_INCLUDE_DIR)
-                message(WARNING "  Include directory not found at ${OPENSSL_INCLUDE_DIR}")
+                message(WARNING "  Include directory not found at ${OPENSSL_ROOT_DIR}/include")
             endif()
         endif()
     endif()
