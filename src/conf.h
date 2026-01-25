@@ -35,6 +35,7 @@ int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 #define SPEEDTEST_PORT          443
 #define SPEEDTEST_UPLOAD_PATH   "/backend/empty.php"
 #define SPEEDTEST_DOWNLOAD_PATH "/backend/garbage.php"
+#define SPEEDTEST_PING_TESTS    10
 #define DRCOM_HOST              "zifuwu.ustb.edu.cn"
 #define DRCOM_PORT              443
 #define DRCOM_FORM_PATH         "/Self/login/?302=LI"

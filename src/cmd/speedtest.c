@@ -10,6 +10,7 @@
 #include <cargs.h>
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
@@ -17,13 +18,26 @@
 #define MAX_BUF_SIZE 4096
 
 typedef struct speedtest {
+    int test_ping;
     int test_upload;
     int test_download;
     int show_in_bits;
     size_t filesizeMB;
 } speedtest_t;
 
+typedef struct ping_result {
+    double ping;   // 延迟 ms
+    double jitter; // 抖动 ms
+} ping_result_t;
+
 const struct cag_option speedtest_options[] = {
+    {
+        .identifier = 'p',
+        .access_letters = "p",
+        .access_name = "ping",
+        .value_name = NULL,
+        .description = "Test ping latency",
+    },
     {
         .identifier = 'c',
         .access_letters = "cs",
@@ -85,6 +99,9 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
                 size_t size = atol(value);
                 config->filesizeMB = size;
             }
+            break;
+        case 'p':
+            config->test_ping = 1;
             break;
         case 'u':
             config->test_upload = 1;
@@ -193,6 +210,97 @@ speedtest_upload(const speedtest_t *config) {
     return microsec_interval(start, end);
 }
 
+static suseconds_t
+http_ping_once(void) {
+    struct timeval start, end;
+    char resp[1];
+
+    http_t *http = alloca(HTTP_T_SIZE);
+    if (http_init(http, SPEEDTEST_DOMAIN, SPEEDTEST_PORT, IPV4_IPV6) != 0)
+        return -1;
+
+    if (http_connect(http) != 0) {
+        http_close(http);
+        return -1;
+    }
+
+    gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
+    double r = random_d();
+    gbuff_appendf(str, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
+
+    http_send_request(http, str, NULL);
+
+    __asm__ __volatile__("" ::: "memory");
+    gettimeofday(&start, NULL);
+    if (http_read(http, resp, 1) <= 0) {
+        http_close(http);
+        return -1;
+    }
+    __asm__ __volatile__("" ::: "memory");
+    gettimeofday(&end, NULL);
+
+    http_close(http);
+
+    return microsec_interval(start, end);
+}
+
+void
+do_ping_test(ping_result_t *result, int count) {
+    suseconds_t rtt;
+    double inst_rtt = 0;
+    double prev_rtt = 0;
+    double min_ping = 0;
+    double avg_jitter = 0;
+
+    for (int i = 0; i < count; i++) {
+        rtt = http_ping_once();
+        if (rtt <= 0) {
+            // 失败策略：这里选择跳过
+            i--;
+            continue;
+        }
+
+        inst_rtt = rtt / 1000.0; // 转成 ms
+
+        // 防止出现0ms或异常小值
+        if (inst_rtt < 1.0) {
+            inst_rtt = (prev_rtt > 0) ? prev_rtt : 1.0;
+        }
+
+        if (i == 0) {
+            // 第一次只记录，不参与统计
+            prev_rtt = inst_rtt;
+            continue;
+        }
+
+        if (i == 1) {
+            min_ping = inst_rtt;
+        } else {
+            if (inst_rtt < min_ping)
+                min_ping = inst_rtt;
+        }
+
+        // 计算瞬时抖动
+        double inst_jitter = fabs(inst_rtt - prev_rtt);
+
+        if (i == 2) {
+            avg_jitter = inst_jitter; // 第一组有效抖动
+        } else if (i > 2) {
+            // 加权移动平均
+            if (inst_jitter > avg_jitter) {
+                avg_jitter = avg_jitter * 0.3 + inst_jitter * 0.7;
+            } else {
+                avg_jitter = avg_jitter * 0.8 + inst_jitter * 0.2;
+            }
+        }
+
+        prev_rtt = inst_rtt;
+    }
+
+    result->ping = min_ping;
+    result->jitter = avg_jitter;
+}
+
 int
 cmd_speedtest(int argc, char **argv) {
     int res;
@@ -201,6 +309,7 @@ cmd_speedtest(int argc, char **argv) {
     char speed_str[20];
 
     speedtest_t config[1] = {{
+        .test_ping = 0,
         .test_download = 0,
         .test_upload = 0,
         .show_in_bits = 0,
@@ -219,8 +328,15 @@ cmd_speedtest(int argc, char **argv) {
         config->test_download = 1;
     }
 
-    /* TODO ping */
-
+    /* Test ping */
+    if (config->test_ping) {
+        ping_result_t ping_result[1] = {0};
+        do_ping_test(ping_result, SPEEDTEST_PING_TESTS);
+        print_log(INFO, "Test %d times ping\n", SPEEDTEST_PING_TESTS);
+        printf("Ping:   %.2f ms\n", ping_result->ping);
+        printf("Jitter: %.2f ms\n", ping_result->jitter);
+        printf("\n");
+    }
     /* Download */
     if (config->test_download) {
         printf("Test download %lu MB\n", config->filesizeMB);

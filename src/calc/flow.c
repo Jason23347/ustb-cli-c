@@ -11,6 +11,8 @@
 #define FREE_FLOW_KB   (FREE_FLOW_GB * GB)
 #define MAX_FLOW_SPEED (313 * MB)
 
+#define round(_type, _num) (_type)((_num) + 0.5)
+
 uint64_t
 flow_speed(flow_history_t *history, uint64_t download) {
     // 新元素位置
