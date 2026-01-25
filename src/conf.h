@@ -47,7 +47,11 @@ int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 #define USTB_PASSWORD_VAR       "USTB_PASSWORD"
 #define USTB_PASSWORD_LEN       sizeof(USTB_USERNAME_VAR)
 #define INFO_REFRESH_INTERVAL   1
-#define FREE_FLOW_GB            120
-#define FEE_PER_1000GB          6120
+
+// https://zifuwu.ustb.edu.cn/Self/dashboard
+// 赠122880MB，超出0.0006元/MB，4点登录，单向计费
+#define FREE_FLOW_GB            120  // 122880MB
+#define FEE_PER_1000GB          6144 // ￥0.0006/MB
+#define MAX_ONLINE_DEVICE_COUNT 4    // 4点登录
 
 #endif /* CONF_H */

@@ -21,7 +21,6 @@
 #define MAX_VAR_LEN             40
 #define MAX_PATH_LEN            200
 #define URLENCODED_IPV6_MAX_LEN (40 + 7 * 2)
-#define MAX_ONLINE_DEVICE_COUNT 4
 #define MAC_HEX_LEN             12
 #define MAC_FORMATTED_LEN       17
 
@@ -680,8 +679,9 @@ devices_output(device_t *config, device_info_t *devices, size_t device_count) {
     const char *body_format;
 
     if (config->output_markdown) {
-        header_format = "| %-20s | %-15s | %-17s |\n"
-                        "| :------------------- | :-------------- | :---------------- |\n";
+        header_format =
+            "| %-20s | %-15s | %-17s |\n"
+            "| :------------------- | :-------------- | :---------------- |\n";
         body_format = "| %-20s | %-15s | %-17s |\n";
     } else {
         header_format = "%-20s %-15s %s\n";
