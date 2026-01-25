@@ -7,8 +7,8 @@
 /* CookieJar flag */
 #define HTTP_COOKIEJAR 4
 /* HTTPS flag */
-#define HTTP_SSL 8
-#define MAX_BUF_SIZE   4096
+#define HTTP_SSL     8
+#define MAX_BUF_SIZE 4096
 
 typedef struct http http_t;
 typedef struct cookiejar cookiejar_t;
@@ -26,7 +26,7 @@ int http_send_request(const http_t *http, const gbuff_t *path,
                       const gbuff_t *data);
 ssize_t http_write(const http_t *http, void *buf, size_t len);
 ssize_t http_read(const http_t *http, void *buf, size_t len);
-void http_close(const http_t *http);
+void http_close(http_t *http);
 
 size_t http_readline(const http_t *http, char *buf, size_t maxlen);
 size_t http_section(const http_t *http, char *buf, size_t maxlen);

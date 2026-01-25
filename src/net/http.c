@@ -229,7 +229,7 @@ http_write(const http_t *http, void *buf, size_t len) {
 }
 
 void
-http_close(const http_t *http) {
+http_close(http_t *http) {
     tcp_close(&http->conn);
 }
 
