@@ -343,7 +343,7 @@ login_request(const gbuff_t *path) {
         return USTB_ERR;
     }
 
-    print_log(DEBUG, "%s\n", content);
+    print_log(DEBUG, "Response: %s\n", content);
 
     return USTB_OK;
 }
@@ -361,9 +361,11 @@ cmd_login(int argc, char **argv) {
     }
 
     // Fix env filepath
+    print_log(DEBUG, "Resolving env filepath...\n");
     if (config->env_filepath == NULL) {
         gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
+        print_log(WARNING, "No env filepath specified, using default\n");
         res = get_defule_env_path(home_str);
         if (res != USTB_OK) {
             return USTB_ERR;
@@ -371,19 +373,21 @@ cmd_login(int argc, char **argv) {
         config->env_filepath = home_str->data;
     }
 
+    print_log(DEBUG, "Using env file: %s\n", config->env_filepath);
+
     // Get IPV6 address
     if (config->use_ipv6) {
-        printf("Fetching IPV6 address...");
+        print_log(DEBUG, "Fetching IPV6 address...\n");
         res = ipv6_get(ipv6_buf, sizeof(ipv6_buf));
         if (res != USTB_OK) {
-            printf("failed");
+            print_log(WARNING, "Failed to fetch IPV6 address\n");
             config->use_ipv6 = 0;
         } else {
             config->ipv6_addr = ipv6_buf;
-            printf("%.*s", (int)sizeof(ipv6_buf), ipv6_buf);
+            print_log(DEBUG, "Obtained [%.*s]\n", (int)sizeof(ipv6_buf),
+                      ipv6_buf);
         }
     }
-    printf("\n");
 
     // Assemble URL path
     gbuff_t path[1] = {gbuff_alloca(MAX_PATH_LEN)};
@@ -395,8 +399,10 @@ cmd_login(int argc, char **argv) {
     // Send request
     res = login_request(path);
     if (res != USTB_OK) {
+        print_log(ERROR, "Login failed\n");
         return EXIT_FAILURE;
     }
+    print_log(INFO, "Login successful\n");
 
     return EXIT_SUCCESS;
 }
@@ -740,7 +746,8 @@ cmd_devices(int argc, char **argv) {
         .password = {gbuff_alloca(MAX_VAR_LEN)},
     }};
     device_info_t devices[MAX_ONLINE_DEVICE_COUNT];
-    size_t max_online_count = sizeof(devices) / sizeof(devices[0]);
+
+    print_log(INFO, "Max online device count: %d\n", MAX_ONLINE_DEVICE_COUNT);
 
     res = devices_get_config(config, argc, argv);
     if (res != USTB_OK) {
@@ -748,9 +755,11 @@ cmd_devices(int argc, char **argv) {
     }
 
     // Fix env filepath
+    print_log(DEBUG, "Resolving env filepath...\n");
     if (config->env_filepath == NULL) {
         gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
         // fallback to default env
+        print_log(WARNING, "No env filepath specified, using default\n");
         res = get_defule_env_path(home_str);
         if (res != USTB_OK) {
             return EXIT_FAILURE;
@@ -758,11 +767,15 @@ cmd_devices(int argc, char **argv) {
         config->env_filepath = home_str->data;
     }
 
+    print_log(DEBUG, "Using env file: %s\n", config->env_filepath);
+
     // Get username & password
     res = account_load_env(account, config->env_filepath);
     if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
+
+    print_log(INFO, "Username: %s\n", account->username->data);
 
     // Init HTTP
     http_t *http = alloca(HTTP_T_SIZE);
@@ -781,7 +794,7 @@ cmd_devices(int argc, char **argv) {
     do {
         // Fetch online devices
         int device_count =
-            devices_check_online(devices, http, max_online_count);
+            devices_check_online(devices, http, MAX_ONLINE_DEVICE_COUNT);
         // Output
         devices_output(config, devices, device_count);
 

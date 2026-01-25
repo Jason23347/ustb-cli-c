@@ -156,7 +156,7 @@ cmd_fee(int argc, char **argv) {
 
     const char *p = strstr(content, "<script");
     if (p == NULL) {
-        print_log(DEBUG, "failed to get variables: %s\n", content);
+        print_log(ERROR, "Failed to get variables: %s\n", content);
         return EXIT_FAILURE;
     }
 
