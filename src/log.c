@@ -2,8 +2,9 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <time.h>
 
-enum LOG_LEVEL log_level = INFO;
+enum LOG_LEVEL log_level = SILENT;
 FILE *log_file = NULL;
 
 void
@@ -28,6 +29,14 @@ print_log(enum LOG_LEVEL level, const char *fmt, ...) {
     }
 
     if (level <= log_level) {
+        // print time
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        char time_str[20];
+        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+        fprintf(log_file, "[%s] ", time_str);
+
+        // print log message
         va_list args;
         va_start(args, fmt);
         int ret = vfprintf(log_file, fmt, args);

@@ -36,6 +36,7 @@ struct cmd_option {
 
 extern struct globconf {
     int need_help;
+    enum LOG_LEVEL log_level;
 #ifdef WITH_COLOR
     int raw_output; /* Output no color */
 #endif

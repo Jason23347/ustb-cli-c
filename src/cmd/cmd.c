@@ -122,6 +122,13 @@ const struct cag_option global_options[] = {
         .value_name = "FILE",
         .description = "Print to file",
     },
+    {
+        .identifier = 'v',
+        .access_letters = "v",
+        .access_name = "debug",
+        .value_name = NULL,
+        .description = "Set log level to debug",
+    },
 #ifdef WITH_COLOR
     {
         .identifier = 'r',
@@ -287,6 +294,10 @@ global_config_parse(int argc, char **argv) {
             arg_idx[argc_remove++] = idx;
 
             break;
+        case 'v':
+            log_set_level(DEBUG);
+            arg_idx[argc_remove++] = idx;
+            break;
         case '?':
             break;
         }
@@ -305,6 +316,11 @@ global_config_parse(int argc, char **argv) {
 
 int
 cmd_parse(int argc, char **argv) {
+    if (argc < 2) {
+        cmd_help(argc, argv);
+        return EXIT_FAILURE;
+    }
+
     const char *command = argv[1];
 
     /* Shift args */
