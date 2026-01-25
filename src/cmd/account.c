@@ -198,19 +198,53 @@ account_load_env(account_t *account, const char *env_filepath) {
     return USTB_OK;
 }
 
-// TODO 非常有优化空间
 static void
-ipv6_urlencode(gbuff_t *dest, const char *ipv6_addr, size_t maxlen) {
-    const char colon = ':';
-    const char colon_encoded[] = "%3A";
-    for (const char *p = ipv6_addr; *p != '\0'; p++) {
-        if (*p == colon) {
-            gbuff_appendf(dest, "%s", colon_encoded);
+ipv6_urlencode(gbuff_t *dest, const char *src) {
+    char colon = ':';
+    int colon_count = 0;
+
+    const char *p = src;
+
+    size_t total = strlen(src);
+    size_t len = 0;
+    size_t remain = total;
+
+    while (remain > 0) {
+        const char *colon_pos = memchr(p, colon, remain);
+
+        if (colon_pos == NULL) {
+            // 后面没有冒号了，整段拷贝
+            memcpy(&dest->data[len], p, remain);
+            len += remain;
+            break;
         } else {
-            gbuff_appendf(dest, "%c", *p);
+            colon_count++;
+            if (colon_count > 7) {
+                // IPv6 地址格式错误，直接拷贝剩余部分
+                // 假设传入的 IPv6 地址没有缩写
+                size_t n = strlen(p);
+                memcpy(&dest->data[len], p, n);
+                len += n;
+                break;
+            }
         }
+
+        // 先拷贝冒号前的部分
+        size_t chunk = colon_pos - p;
+        memcpy(&dest->data[len], p, chunk);
+        len += chunk;
+
+        // 再写 "%3A"
+        dest->data[len++] = '%';
+        dest->data[len++] = '3';
+        dest->data[len++] = 'A';
+
+        p = colon_pos + 1;
+        remain = total - (p - src);
     }
-    gbuff_appendf(dest, "");
+
+    dest->data[len] = '\0';
+    dest->len = len;
 }
 
 static USTB_RET
@@ -240,8 +274,8 @@ login_url_path(const login_t *config, gbuff_t *str) {
     gbuff_appendf(str, "&0MKKey=123456");
 
     if (config->use_ipv6) {
-        gbuff_t *ipv6_encoded = &gbuff_alloca(URLENCODED_IPV6_MAX_LEN);
-        ipv6_urlencode(ipv6_encoded, config->ipv6_addr, sizeof(ipv6_encoded));
+        gbuff_t ipv6_encoded[1] = {gbuff_alloca(URLENCODED_IPV6_MAX_LEN)};
+        ipv6_urlencode(ipv6_encoded, config->ipv6_addr);
         gbuff_appendf(str, "&v6ip=");
         gbuff_concat(str, ipv6_encoded);
     }
@@ -384,8 +418,7 @@ cmd_login(int argc, char **argv) {
             config->use_ipv6 = 0;
         } else {
             config->ipv6_addr = ipv6_buf;
-            print_log(DEBUG, "Obtained [%.*s]\n", (int)sizeof(ipv6_buf),
-                      ipv6_buf);
+            print_log(DEBUG, "Obtained [%s]\n", ipv6_buf);
         }
     }
 
