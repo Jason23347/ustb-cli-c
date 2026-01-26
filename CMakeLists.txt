@@ -73,7 +73,7 @@ IF(USE_ICONV)
 find_package(Iconv REQUIRED)
 ENDIF()
 find_package(Threads REQUIRED)
-target_link_libraries(ustb-cli PRIVATE Threads::Threads)
+target_link_libraries(ustb-cli PRIVATE Threads::Threads m)
 
 #---------------------------------------
 # OpenSSL
