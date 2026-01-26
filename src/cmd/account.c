@@ -9,6 +9,9 @@
 #include "terminal.h"
 
 #include <cargs.h>
+#ifdef USE_INTERACTIVE
+#include <linenoise.h>
+#endif
 
 #include <iconv.h>
 #include <pwd.h>
@@ -30,6 +33,9 @@ typedef struct login {
     int use_ipv6;
     const char *ipv6_addr;
     const char *env_filepath;
+#ifdef USE_INTERACTIVE
+    int interactive; // interactive mode
+#endif
 } login_t;
 
 typedef struct {
@@ -85,6 +91,15 @@ const struct cag_option login_options[] = {
         .value_name = "USE_IPV6",
         .description = "Enable IPV6 or not, default true",
     },
+#ifdef USE_INTERACTIVE
+    {
+        .identifier = 'm',
+        .access_letters = "m",
+        .access_name = NULL,
+        .value_name = NULL,
+        .description = "Enter interactive mode",
+    },
+#endif
 };
 const size_t login_opt_count = CAG_ARRAY_SIZE(login_options);
 
@@ -248,19 +263,30 @@ ipv6_urlencode(gbuff_t *dest, const char *src) {
 }
 
 static USTB_RET
-login_url_path(const login_t *config, gbuff_t *str) {
-    account_t account[1] = {{
-        .username = {gbuff_alloca(MAX_VAR_LEN)},
-        .password = {gbuff_alloca(MAX_VAR_LEN)},
-    }};
+login_url_path(gbuff_t *str, const login_t *config, const account_t *account) {
+    const gbuff_t *username;
+    const gbuff_t *password;
 
-    // Get username & password
-    int res = account_load_env(account, config->env_filepath);
-    if (res != USTB_OK) {
-        return USTB_ERR;
+    if (account != NULL) {
+        username = account->username;
+        password = account->password;
+    } else {
+        // Get username & password
+        account_t my_account[1] = {{
+            .username = {gbuff_alloca(MAX_VAR_LEN)},
+            .password = {gbuff_alloca(MAX_VAR_LEN)},
+        }};
+
+        int res = account_load_env(my_account, config->env_filepath);
+        if (res != USTB_OK) {
+            return USTB_ERR;
+        }
+
+        username = my_account->username;
+        password = my_account->password;
     }
 
-    if ((account->username->len == 0) || (account->password->len == 0)) {
+    if ((username->len == 0) || (password->len == 0)) {
         fprintf(stderr, USTB_USERNAME_VAR " or " USTB_PASSWORD_VAR
                                           " not found in env file\n");
         return USTB_ERR;
@@ -268,9 +294,9 @@ login_url_path(const login_t *config, gbuff_t *str) {
 
     /* The order matters */
     gbuff_appendf(str, LOGIN_PATH "?callback=a&DDDDD=");
-    gbuff_concat(str, account->username);
+    gbuff_concat(str, username);
     gbuff_appendf(str, "&upass=");
-    gbuff_concat(str, account->password);
+    gbuff_concat(str, password);
     gbuff_appendf(str, "&0MKKey=123456");
 
     if (config->use_ipv6) {
@@ -328,6 +354,11 @@ login_get_config(login_t *config, int argc, char **argv) {
                 config->use_ipv6 = (cmp == 0);
             }
             break;
+#ifdef USE_INTERACTIVE
+        case 'm':
+            config->interactive = 1;
+            break;
+#endif
         case '?':
             cag_option_print_error(&context, stdout);
             print_login_help(argc + 1, argv - 1);
@@ -387,44 +418,80 @@ cmd_login(int argc, char **argv) {
     int res;
     char ipv6_buf[40];
     login_t config[1] = {0};
+    account_t account[1] = {{
+        .username = {gbuff_alloca(MAX_VAR_LEN)},
+        .password = {gbuff_alloca(MAX_VAR_LEN)},
+    }};
 
-    // Get username & password & other things
+    // Parse config
     res = login_get_config(config, argc, argv);
     if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
 
-    // Fix env filepath
-    print_log(DEBUG, "Resolving env filepath...\n");
-    if (config->env_filepath == NULL) {
-        gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
-        // fallback to default env
-        print_log(WARNING, "No env filepath specified, using default\n");
-        res = get_defule_env_path(home_str);
-        if (res != USTB_OK) {
-            return USTB_ERR;
+#ifdef USE_INTERACTIVE
+    if (config->interactive) {
+        // Get username and password from terminal with linenoise
+        // TODO 获取当前登录用户作为默认用户名
+        char *username = linenoise("Username: ");
+        if (username == NULL || strlen(username) == 0) {
+            fprintf(stderr, "Error: Username is required\n");
+            return EXIT_FAILURE;
         }
-        config->env_filepath = home_str->data;
+        gbuff_appendf(account->username, "%s", username);
+        linenoiseFree(username);
+
+        linenoiseMaskModeEnable();
+        char *password = linenoise("Password: ");
+        linenoiseMaskModeDisable();
+        if (password == NULL || strlen(password) == 0) {
+            fprintf(stderr, "Error: Password is required\n");
+            return EXIT_FAILURE;
+        }
+        gbuff_appendf(account->password, "%s", password);
+        linenoiseFree(password);
+    } else
+#endif
+    {
+        // Resolve env filepath
+        print_log(DEBUG, "Resolving env filepath...\n");
+        if (config->env_filepath == NULL) {
+            gbuff_t home_str[1] = {gbuff_alloca(MAX_PATH_LEN)};
+            // fallback to default env
+            print_log(WARNING, "No env filepath specified, using default\n");
+            res = get_defule_env_path(home_str);
+            if (res != USTB_OK) {
+                return USTB_ERR;
+            }
+            config->env_filepath = home_str->data;
+        }
     }
 
     print_log(DEBUG, "Using env file: %s\n", config->env_filepath);
 
     // Get IPV6 address
     if (config->use_ipv6) {
-        print_log(DEBUG, "Fetching IPV6 address...\n");
         res = ipv6_get(ipv6_buf, sizeof(ipv6_buf));
         if (res != USTB_OK) {
             print_log(WARNING, "Failed to fetch IPV6 address\n");
             config->use_ipv6 = 0;
         } else {
             config->ipv6_addr = ipv6_buf;
-            print_log(DEBUG, "Obtained [%s]\n", ipv6_buf);
+            printf("Obtained IPV6 address: %s\n", ipv6_buf);
         }
+    } else {
+        printf("IPV6 disabled.\n");
     }
 
     // Assemble URL path
     gbuff_t path[1] = {gbuff_alloca(MAX_PATH_LEN)};
-    res = login_url_path(config, path);
+    const account_t *account_ptr = NULL;
+#ifdef USE_INTERACTIVE
+    if (config->interactive) {
+        account_ptr = account;
+    }
+#endif
+    res = login_url_path(path, config, account_ptr);
     if (res != USTB_OK) {
         return EXIT_FAILURE;
     }
@@ -432,10 +499,10 @@ cmd_login(int argc, char **argv) {
     // Send request
     res = login_request(path);
     if (res != USTB_OK) {
-        print_log(ERROR, "Login failed\n");
+        fprintf(stderr, "Login failed\n");
         return EXIT_FAILURE;
     }
-    print_log(INFO, "Login successful\n");
+    printf("Login successful\n");
 
     return EXIT_SUCCESS;
 }
