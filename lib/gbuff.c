@@ -106,7 +106,8 @@ gbuff_appendf(gbuff_t *buff, const char *fmt, ...) {
     assert(buff->data != NULL);
 
     // full
-    if (buff->len >= buff->cap) {
+    // 1 for null terminator
+    if (buff->len + 1 >= buff->cap) {
         return -1;
     }
 

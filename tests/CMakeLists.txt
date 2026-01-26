@@ -76,6 +76,27 @@ target_compile_options(test_formats PRIVATE --coverage)
 target_link_options(test_formats PRIVATE --coverage ${WRAP_OPTS})
 
 # ===========================================
+# test gbuff
+# ===========================================
+add_executable(test_gbuff
+    test_gbuff.c
+)
+target_link_libraries(test_gbuff PRIVATE cmocka::cmocka)
+target_include_directories(test_gbuff PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(
+    NAME test_gbuff
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test_runner.sh
+            $<TARGET_FILE:test_gbuff>
+)
+target_compile_options(test_gbuff PRIVATE --coverage)
+target_link_options(test_gbuff PRIVATE --coverage)
+
+# ===========================================
 # test http
 # ===========================================
 add_executable(test_http
