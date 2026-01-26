@@ -61,10 +61,34 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
 
 ### 编译到OpenWrt (MUSL)
 
+目前只准备了面向arm64架构软路由的工具链文件。有需要可以自行修改。
+
+#### 准备OpenWrt SDK
+
+下载安装官方SDK压缩包，例如
+```bash
+wget https://downloads.immortalwrt.org/releases/24.10.2/targets/rockchip/armv8/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+```
+
+解压、安装`libopenssl`、编译
+
+```bash
+tar --zstd -xf immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+cd immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64
+mkdir host # 因为提示touch指令出错
+./scripts/feeds update base
+./scripts/feeds install libopenssl
+make package/feeds/base/openssl/compile V=s
+```
+
+然后在`ustb-cli-c`下编译，
+其中`<OpenWrt SDK path>`就是刚才编译的SDK的路径，例如`$HOME/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64`。
+
 ```shell
 mkdir -p build && cd build
 export STAGING_DIR=<OpenWrt SDK path>/staging_dir
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
+cmake .. \
+	-DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
 	-DWITH_COLOR=on \
 	-DWITH_BALANCE=on \
 	-DWITH_ACCOUNT=on \
@@ -72,8 +96,6 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-openwrt-toolchain.cmake \
 	-DWITH_COMPLETION=off \
 	-DGB2312_DECODER="disabled"
 ```
-
-例如我的`<OpenWrt SDK path>`为`$HOME/immortalwrt-sdk-24.10.2-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64`
 
 ### 其他平台
 
