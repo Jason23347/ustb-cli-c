@@ -76,6 +76,23 @@ target_compile_options(test_formats PRIVATE --coverage)
 target_link_options(test_formats PRIVATE --coverage ${WRAP_OPTS})
 
 # ===========================================
+# test calc
+# ===========================================
+add_executable(test_calc
+    test_calc.c
+)
+target_link_libraries(test_calc PRIVATE cmocka::cmocka)
+target_include_directories(test_calc PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+add_test(NAME test_calc COMMAND test_calc)
+target_compile_options(test_calc PRIVATE --coverage)
+target_link_options(test_calc PRIVATE --coverage)
+
+# ===========================================
 # test gbuff
 # ===========================================
 add_executable(test_gbuff
