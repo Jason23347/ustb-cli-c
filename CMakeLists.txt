@@ -26,6 +26,7 @@ option(WITH_ACCOUNT "Enable account features: login, logout, whoami" ON)
 option(WITH_BALANCE "Enable balance features: info, fee" ON)
 option(WITH_SPEEDTEST "Enable speedtest features: speedtest, monitor" ON)
 option(WITH_COMPLETION "Enable completion features: completion" OFF)
+option(USE_INTERACTIVE "Enable interactive input with linenoise" OFF)
 set(GB2312_DECODER "iconv" CACHE STRING "Select GB2312 decoding method: iconv, builtin, or disabled")
 set_property(CACHE GB2312_DECODER PROPERTY STRINGS "iconv" "builtin" "disabled")
 set(OPENSSL_ROOT_DIR "" CACHE PATH "OpenSSL root directory (optional)")
@@ -182,3 +183,11 @@ endif()
 add_subdirectory(external/cargs)
 target_link_libraries(ustb-cli PRIVATE cargs)
 target_include_directories(ustb-cli PRIVATE external/cargs/include)
+
+#---------------------------------------
+# Linenoise for interactive input
+#---------------------------------------
+if(USE_INTERACTIVE)
+    target_sources(ustb-cli PRIVATE external/linenoise/linenoise.c)
+    target_include_directories(ustb-cli PRIVATE external/linenoise)
+endif()
