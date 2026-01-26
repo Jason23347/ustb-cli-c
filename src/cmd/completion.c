@@ -187,10 +187,10 @@ completion_zsh_print_handler() {
 
 static void
 completion_zsh_print_function(const char *program) {
+    printf("#compdef %s\n", program);
+
     printf("_%s() {\n", program);
-
     printf("  local curcontext=\"$curcontext\" state line\n");
-
     completion_zsh_print_commands("commands", commands, command_count);
 
     completion_zsh_print_opts("global_opts", global_options,
@@ -207,18 +207,105 @@ completion_zsh_print_function(const char *program) {
     completion_zsh_print_handler();
 
     printf("}\n");
+
+    printf("compdef _%s %s\n", program, program);
+}
+
+static void
+completion_bash_print_commands() {
+    for (size_t i = 0; i < command_count; i++) {
+        printf("%s ", commands[i].name);
+    }
+}
+
+static void
+completion_bash_print_opts(const struct cag_option *options, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        const cag_option *opt = &options[i];
+        if (cag_has_name(opt)) {
+            printf("--%s ", opt->access_name);
+        }
+        if (cag_has_letters(opt)) {
+            size_t letter_len = strlen(opt->access_letters);
+            for (size_t j = 0; j < letter_len; j++) {
+                printf("-%c ", opt->access_letters[j]);
+            }
+        }
+    }
+}
+
+static void
+completion_bash_print_function(const char *program) {
+    char *func_name = strdup(program);
+    while (1) {
+        char *dash = strchr(func_name, '-');
+        if (!dash) {
+            break;
+        }
+        *dash = '_';
+    }
+
+    printf("_%s() {\n"
+           "  local cur prev words cword\n"
+           "  COMPREPLY=()\n"
+           "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+           "  prev=\"${COMP_WORDS[COMP_CWORD-1]}\"\n"
+           "  words=(${COMP_WORDS[@]})\n"
+           "  cword=${COMP_CWORD}\n\n"
+           "  local commands='",
+           func_name);
+    completion_bash_print_commands();
+    printf("'\n"
+           "  local global_opts='");
+    completion_bash_print_opts(global_options, global_options_count);
+    printf("'\n\n"
+           "  local login_opts='");
+    completion_bash_print_opts(login_options, login_opt_count);
+    printf("'\n"
+           "  local whoami_opts='");
+    completion_bash_print_opts(whoami_options, whoami_opt_count);
+    printf("'\n"
+           "  local devices_opts='");
+    completion_bash_print_opts(devices_options, devices_opt_count);
+    printf("'\n"
+           "  local speedtest_opts='");
+    completion_bash_print_opts(speedtest_options, speedtest_opt_count);
+    printf("'\n\n"
+           "  if [[ $cword -eq 1 ]]; then\n"
+           "    COMPREPLY=( $(compgen -W \"$commands\" -- \"$cur\") )\n"
+           "    return 0\n"
+           "  fi\n\n"
+           "  local cmd=\"${words[1]}\"\n"
+           "  case \"$cmd\" in\n");
+
+    // Dynamically generate case branches for all commands
+    for (size_t i = 0; i < command_count; i++) {
+        printf("    %s)\n", commands[i].name);
+        printf("      local cmd_opts=\"${%s_opts:-}\"\n", commands[i].name);
+        printf("      local opts=\"${cmd_opts} ${global_opts}\"\n");
+        printf("      COMPREPLY=( $(compgen -W \"${opts}\" -- \"${cur}\") )\n");
+        printf("      ;;\n");
+    }
+
+    printf("  esac\n"
+           "}\n");
+    printf("complete -o bashdefault -o default -o nospace -F _%s %s\n",
+           func_name, program);
+
+    free(func_name);
 }
 
 int
 cmd_completion(int argc, char **argv) {
     const char *program = basename(argv[-1]);
-    /* TODO other completions */
     const char *shell = (argc > 1) ? argv[1] : "zsh";
 
     if (strcmp(shell, "zsh") == 0) {
-        printf("#compdef %s\n", program);
         completion_zsh_print_function(program);
-        printf("compdef _%s %s\n", program, program);
+
+        return EXIT_SUCCESS;
+    } else if (strcmp(shell, "bash") == 0) {
+        completion_bash_print_function(program);
 
         return EXIT_SUCCESS;
     } else { /* Other shells */
