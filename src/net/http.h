@@ -31,6 +31,9 @@ void http_close(http_t *http);
 size_t http_readline(const http_t *http, char *buf, size_t maxlen);
 size_t http_section(const http_t *http, char *buf, size_t maxlen);
 
+/* Get HTTP status code from last request */
+int http_status_code(const http_t *http);
+
 static inline const char *
 http_get(http_t *http, const gbuff_t *path) {
     return http_request(http, path, NULL);

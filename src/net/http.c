@@ -254,26 +254,55 @@ http_section(const http_t *http, char *buf, size_t maxlen) {
     return line_count;
 }
 
+int
+http_status_code(const http_t *http) {
+    return http->status_code;
+}
+
+static int
+http_parse_status(const char *status_line) {
+    const char space = ' ';
+    const char *sp = strchr(status_line, space);
+    if (sp) {
+        return atoi(sp + 1);
+    } else {
+        return -1; /* invalid */
+    }
+}
+
 void
-http_headers(const http_t *http, char *header_section) {
+http_headers(http_t *http, char *header_section) {
     const char crlf[] = "\r\n";
+
     char *p = header_section;
     const char **headers = http->headers->list;
     int count = http->headers->count;
 
-    /* Skip 1st line "HTTP/1.1 200 ok" */
-    // TODO get status from 1st line
+    /* ---- parse status line ---- */
+    char *line_end = strstr(p, crlf);
+    if (line_end == NULL) {
+        http->status_code = -1;
+    } else {
+        *line_end = '\0';
+        http->status_code = http_parse_status(p);
+        p = line_end + strlen(crlf);
+    }
+
+    print_log(DEBUG, "HTTP Status Code: %d\n", http->status_code);
+
+    /* parse headers */
     size_t i = 0;
-    do {
-        p = strstr(p, crlf);
-        if (p == NULL) {
+    while (i < (size_t)count && p) {
+        char *next = strstr(p, crlf);
+        if (!next || next == p) {
+            /* empty line -> end of headers */
             break;
         }
-        *p = '\0';
-        p += strlen(crlf);
-        headers[i] = p;
-        i++;
-    } while (i < count);
+
+        *next = '\0';
+        headers[i++] = p;
+        p = next + strlen(crlf);
+    }
 }
 
 const char *
@@ -411,6 +440,8 @@ http_body(http_t *http) {
 const char *
 http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
     assert(path->data[0] == '/');
+
+    print_log(DEBUG, "HTTP Request Path: %s\n", path->data);
 
     /* TCP connect */
     int res = http_connect(http);

@@ -812,8 +812,7 @@ cmd_devices(int argc, char **argv) {
 
     // Init HTTP
     http_t *http = alloca(HTTP_T_SIZE);
-    res = http_init(http, DRCOM_HOST, DRCOM_PORT,
-                    IPV4_ONLY | HTTP_COOKIEJAR | HTTP_SSL);
+    res = http_init(http, DRCOM_HOST, DRCOM_PORT, IPV4_ONLY | HTTP_COOKIEJAR);
     if (res != 0) {
         return EXIT_FAILURE;
     }
