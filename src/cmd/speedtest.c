@@ -11,6 +11,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
@@ -23,7 +24,17 @@ typedef struct speedtest {
     int test_download;
     int show_in_bits;
     size_t filesizeMB;
+    int thread_count;
 } speedtest_t;
+
+typedef suseconds_t (*transfer_func_t)(size_t filesizeMB);
+
+typedef struct transfer_thread_arg {
+    size_t filesizeMB;
+    suseconds_t *interval;
+    int thread_id;
+    transfer_func_t func;
+} transfer_thread_arg_t;
 
 typedef struct ping_result {
     double ping;   // 延迟 ms
@@ -50,8 +61,7 @@ const struct cag_option speedtest_options[] = {
         .access_letters = "j",
         .access_name = "thread",
         .value_name = "NUM",
-        .description =
-            "(NOT IMPLEMENTED) Specify NUM threads to use, default 4",
+        .description = "Specify NUM threads to use, default 4",
     },
     {
         .identifier = 'u',
@@ -100,6 +110,14 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
                 config->filesizeMB = size;
             }
             break;
+        case 'j':
+            value = cag_option_get_value(&context);
+            if (value != NULL && strlen(value) != 0) {
+                int threads = atoi(value);
+                if (threads > 0)
+                    config->thread_count = threads;
+            }
+            break;
         case 'p':
             config->test_ping = 1;
             break;
@@ -123,7 +141,9 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
 }
 
 static suseconds_t
-speedtest_download(const speedtest_t *config) {
+speedtest_download_single(size_t filesizeMB) {
+    print_log(DEBUG, "Download thread: filesize %lu MB\n", filesizeMB);
+
     double r;
     int total;
     char buf[MAX_BUF_SIZE];
@@ -138,13 +158,13 @@ speedtest_download(const speedtest_t *config) {
     gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
     gbuff_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
-                  config->filesizeMB);
+                  (unsigned int)filesizeMB);
 
     http_connect(http);
     http_send_request(http, str, NULL);
     http_section(http, buf, sizeof(buf));
 
-    total = config->filesizeMB * ((MB * 1024) / sizeof(buf));
+    total = filesizeMB * ((MB * 1024) / sizeof(buf));
 
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
@@ -157,6 +177,62 @@ speedtest_download(const speedtest_t *config) {
     http_close(http);
 
     return microsec_interval(start, end);
+}
+
+static void *
+speedtest_download_thread(void *arg) {
+    transfer_thread_arg_t *thread_arg = (transfer_thread_arg_t *)arg;
+    suseconds_t interval = thread_arg->func(thread_arg->filesizeMB);
+    *thread_arg->interval = interval;
+    free(thread_arg);
+
+    return NULL;
+}
+
+static suseconds_t
+speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
+    int thread_count = config->thread_count;
+    size_t base_size = config->filesizeMB / thread_count;
+    size_t remainder = config->filesizeMB % thread_count;
+
+    pthread_t *threads = malloc(sizeof(pthread_t) * thread_count);
+    suseconds_t *intervals = malloc(sizeof(suseconds_t) * thread_count);
+
+    struct timeval global_start, global_end;
+
+    __asm__ __volatile__("" ::: "memory");
+    gettimeofday(&global_start, NULL);
+
+    for (int i = 0; i < thread_count; i++) {
+        transfer_thread_arg_t *arg = malloc(sizeof(transfer_thread_arg_t));
+        arg->filesizeMB = base_size;
+        if ((remainder != 0) && (i == 0)) {
+            arg->filesizeMB += remainder;
+        }
+        arg->interval = &intervals[i];
+        arg->thread_id = i;
+        arg->func = func;
+
+        pthread_create(&threads[i], NULL, speedtest_download_thread, arg);
+    }
+
+    for (int i = 0; i < thread_count; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    __asm__ __volatile__("" ::: "memory");
+    gettimeofday(&global_end, NULL);
+    suseconds_t total_interval = microsec_interval(global_start, global_end);
+
+    free(threads);
+    free(intervals);
+
+    return total_interval;
+}
+
+static suseconds_t
+speedtest_download(const speedtest_t *config) {
+    return speedtest_transfer_concurrent(config, speedtest_download_single);
 }
 
 static uint32_t
@@ -173,7 +249,9 @@ fill_random_with_seed(uint8_t *buf, size_t len, uint32_t *seed) {
 }
 
 static suseconds_t
-speedtest_upload(const speedtest_t *config) {
+speedtest_upload_single(size_t filesizeMB) {
+    print_log(DEBUG, "Upload thread: filesize %lu MB\n", filesizeMB);
+
     double r;
     uint32_t seed;
     int total;
@@ -192,7 +270,7 @@ speedtest_upload(const speedtest_t *config) {
 
     http_connect(http);
 
-    total = config->filesizeMB * ((1024 * 1024) / sizeof(buf));
+    total = filesizeMB * ((1024 * 1024) / sizeof(buf));
     seed = rand();
 
     fill_random_with_seed((uint8_t *)buf, sizeof(buf), &seed);
@@ -208,6 +286,20 @@ speedtest_upload(const speedtest_t *config) {
     http_close(http);
 
     return microsec_interval(start, end);
+}
+
+static void *
+speedtest_upload_thread(void *arg) {
+    transfer_thread_arg_t *thread_arg = (transfer_thread_arg_t *)arg;
+    suseconds_t interval = speedtest_upload_single(thread_arg->filesizeMB);
+    *thread_arg->interval = interval;
+    free(thread_arg);
+    return NULL;
+}
+
+static suseconds_t
+speedtest_upload(const speedtest_t *config) {
+    return speedtest_transfer_concurrent(config, speedtest_upload_single);
 }
 
 static suseconds_t
@@ -288,9 +380,9 @@ do_ping_test(ping_result_t *result, int count) {
         } else if (i > 2) {
             // 加权移动平均
             if (inst_jitter > avg_jitter) {
-                avg_jitter = avg_jitter * 0.3 + inst_jitter * 0.7;
+                avg_jitter = (avg_jitter * 0.3) + (inst_jitter * 0.7);
             } else {
-                avg_jitter = avg_jitter * 0.8 + inst_jitter * 0.2;
+                avg_jitter = (avg_jitter * 0.8) + (inst_jitter * 0.2);
             }
         }
 
@@ -314,9 +406,8 @@ cmd_speedtest(int argc, char **argv) {
         .test_upload = 0,
         .show_in_bits = 0,
         .filesizeMB = 100,
+        .thread_count = 4,
     }};
-
-    /* TODO 多线程下载/上传 */
 
     res = speedtest_get_config(config, argc, argv);
     if (res != USTB_OK) {
@@ -336,6 +427,10 @@ cmd_speedtest(int argc, char **argv) {
         printf("Ping:   %.2f ms\n", ping_result->ping);
         printf("Jitter: %.2f ms\n", ping_result->jitter);
         printf("\n");
+    }
+    /* Show thread count */
+    if (config->test_download || config->test_upload) {
+        printf("Using %d threads\n", config->thread_count);
     }
     /* Download */
     if (config->test_download) {
