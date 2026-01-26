@@ -2,8 +2,7 @@
 
 #include "calc/fee.c"
 #include "calc/flow.c"
-#include "calc/timer.c"
-#include "debug.c"
+#include "calc/interval.c"
 
 #define BUF_SIZE 16
 

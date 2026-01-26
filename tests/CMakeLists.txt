@@ -43,10 +43,9 @@ add_library(mock STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../lib/gbuff.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/fee.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/flow.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/timer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/calc/interval.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/net/cookiejar.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/net/http.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/debug.c
 )
 target_include_directories(mock PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -23,7 +23,11 @@
 #define uint64_spec "%llu"
 #endif /* __WORDSIZE */
 
-#define print_log(DEBUG, ...) ((void)0)
+enum LOG_LEVEL {
+    SILENT = 0,
+};
+
+#define print_log(...) ((void)0)
 
 static inline int
 cmd_parse(int argc, char **argv) {

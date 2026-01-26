@@ -16,7 +16,7 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
 }
 
 void
-tcp_close(const tcp_t *tcp) {
+tcp_close(tcp_t *tcp) {
     close(tcp->fd);
 }
 
