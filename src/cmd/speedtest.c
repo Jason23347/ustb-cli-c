@@ -288,15 +288,6 @@ speedtest_upload_single(size_t filesizeMB) {
     return microsec_interval(start, end);
 }
 
-static void *
-speedtest_upload_thread(void *arg) {
-    transfer_thread_arg_t *thread_arg = (transfer_thread_arg_t *)arg;
-    suseconds_t interval = speedtest_upload_single(thread_arg->filesizeMB);
-    *thread_arg->interval = interval;
-    free(thread_arg);
-    return NULL;
-}
-
 static suseconds_t
 speedtest_upload(const speedtest_t *config) {
     return speedtest_transfer_concurrent(config, speedtest_upload_single);
