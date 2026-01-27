@@ -54,6 +54,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Source files
 #---------------------------------------
 file(GLOB SRC_FILES
+    lib/compat_strcasestr.c
     lib/decode.c
     lib/gbuff.c
     src/*.c

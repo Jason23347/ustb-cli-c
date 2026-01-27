@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "http.h"
 
 #include <stdlib.h>

@@ -65,4 +65,7 @@ struct extract {
 /* Extract pattern prefix=['"]?(.*)['"]? */
 int gbuff_extract(const struct extract *data);
 
+char *compat_strcasestr(const char *__haystack, const char *__needle);
+#define strcasestr(__haystack, __needle) compat_strcasestr(__haystack, __needle)
+
 #endif /* LIB_GBUFF_H */
