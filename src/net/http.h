@@ -4,11 +4,10 @@
 #include "lib/gbuff.h"
 #include "tcp.h"
 
-/* CookieJar flag */
-#define HTTP_COOKIEJAR 4
-/* HTTPS flag */
-#define HTTP_SSL     8
-#define MAX_BUF_SIZE 4096
+#define HTTP_COOKIEJAR 4  /* CookieJar flag */
+#define HTTP_SSL       8  /* HTTPS flag */
+#define HTTP_REDIRECT  16 /* Auto redirect flag */
+#define MAX_BUF_SIZE   4096
 
 typedef struct http http_t;
 typedef struct cookiejar cookiejar_t;
@@ -50,5 +49,8 @@ int cookiejar_resolve(cookiejar_t *cookiejar, const char **headers,
 const char *cookiejar_str(const cookiejar_t *cookiejar);
 size_t cookiejar_length(const cookiejar_t *cookiejar);
 void cookiejar_free(cookiejar_t *cookiejar);
+
+void http_disable_redirect(http_t *http);
+void http_enable_redirect(http_t *http);
 
 #endif /* HTTP_H */

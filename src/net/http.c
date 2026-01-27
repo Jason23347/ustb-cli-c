@@ -14,6 +14,7 @@
 #define MAX_BUF_SIZE       4096
 #define MAX_TRUNK_SIZE     64
 #define MAX_COOKIEJAR_SIZE 128
+#define MAX_REDIRECTS      5
 
 typedef struct http_headers {
     const char **list;
@@ -23,8 +24,9 @@ typedef struct http_headers {
 typedef struct http {
     // Settings
     const char *domain;
-    uint16_t port;
-    int http_mode;
+    int port;
+
+    int http_mode; // HTTP mode flags
 
     tcp_t conn;
     cookiejar_t *cookiejar;
@@ -32,6 +34,9 @@ typedef struct http {
 #ifdef USE_OPENSSL
     int use_ssl;
 #endif
+
+    int use_redirect;
+    int redirect_count;
 
     // Results
     int status_code;
@@ -66,6 +71,15 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     }
 #endif
 
+    /* Redirect */
+    http->redirect_count = 0;
+    if ((http_mode & HTTP_REDIRECT) != 0) {
+        http->use_redirect = 1;
+    } else {
+        http->use_redirect = 0;
+    }
+
+    /* CookieJar */
     if ((http_mode & HTTP_COOKIEJAR) != 0) {
         cookiejar_t *cookiejar = cookiejar_init(MAX_COOKIEJAR_SIZE);
         if (cookiejar == NULL) {
@@ -76,6 +90,7 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
         http->cookiejar = NULL;
     }
 
+    /* Body buffer */
     if (gbuff_init(http->body, MAX_BUF_SIZE) != 0) {
         goto fail;
     }
@@ -437,8 +452,25 @@ http_body(http_t *http) {
     }
 }
 
-const char *
-http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
+static const char *
+get_path_of_uri(const char *uri) {
+    const char scheme[] = "://";
+    const char *p = strstr(uri, scheme);
+    if (p != NULL) {
+        p += strlen(scheme); /* skip scheme */
+        const char *path = strchr(p, '/');
+        if (path != NULL) {
+            return path;
+        } else {
+            return "/";
+        }
+    } else {
+        return uri;
+    }
+}
+
+static const char *
+http_request_call(http_t *http, const gbuff_t *path, const gbuff_t *data) {
     assert(path->data[0] == '/');
 
     print_log(DEBUG, "HTTP Request Path: %s\n", path->data);
@@ -463,12 +495,37 @@ http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
     }
     http->headers->list = alloca(headers_count * sizeof(char *));
     http->headers->count = headers_count;
-
+    /* Parse headers */
     http_headers(http, headers_section);
     /* Cookies */
     cookiejar_t *cookiejar = http->cookiejar;
     if (cookiejar != NULL) {
         cookiejar_resolve(cookiejar, http->headers->list, headers_count);
+    }
+    /* Redirect */
+    if (http->use_redirect && http_status_code(http) == 302) {
+        const char location_header[] = "location:";
+        const char *location = http_find_header(http, location_header);
+        if (location != NULL) {
+            /* Follow redirect */
+            location += strlen(location_header);
+            /* Trim spaces */
+            char space = ' ';
+            while (*location == space) {
+                location++;
+            }
+            /* Remove "https://domain" */
+            location = get_path_of_uri(location);
+            gbuff_t path[1] = {gbuff_alloca(MAX_BUF_SIZE)};
+            gbuff_appendf(path, "%s", location);
+            http->redirect_count++;
+            if (http->redirect_count > MAX_REDIRECTS) {
+                print_log(ERROR, "Maximum redirects reached (%d)\n",
+                          MAX_REDIRECTS);
+                return NULL;
+            }
+            return http_request_call(http, path, data);
+        }
     }
     /* Entire body */
     res = http_body(http);
@@ -479,4 +536,20 @@ http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
     http_close(http);
 
     return http->body->data;
+}
+
+const char *
+http_request(http_t *http, const gbuff_t *path, const gbuff_t *data) {
+    http->redirect_count = 0;
+    return http_request_call(http, path, data);
+}
+
+void
+http_disable_redirect(http_t *http) {
+    http->use_redirect = 0;
+}
+
+void
+http_enable_redirect(http_t *http) {
+    http->use_redirect = 1;
 }
