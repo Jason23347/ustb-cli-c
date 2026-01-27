@@ -414,6 +414,7 @@ login_request(const gbuff_t *path) {
     return USTB_OK;
 }
 
+#ifdef USE_INTERACTIVE
 static USTB_RET
 get_username_from_prompt(char *username, size_t maxlen) {
     int ok = 0; // whether to use current logged in user
@@ -465,6 +466,7 @@ get_username_from_prompt(char *username, size_t maxlen) {
 
     return USTB_OK;
 }
+#endif /* USE_INTERACTIVE */
 
 int
 cmd_login(int argc, char **argv) {
