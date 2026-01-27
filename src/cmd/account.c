@@ -13,6 +13,7 @@
 #include <linenoise.h>
 #endif
 
+#include <ctype.h>
 #include <iconv.h>
 #include <pwd.h>
 #include <stdlib.h>
@@ -413,6 +414,58 @@ login_request(const gbuff_t *path) {
     return USTB_OK;
 }
 
+static USTB_RET
+get_username_from_prompt(char *username, size_t maxlen) {
+    int ok = 0; // whether to use current logged in user
+
+    // Get username and password from terminal with linenoise
+    http_t *http = alloca(HTTP_T_SIZE);
+    int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
+    if (res != 0) {
+        return USTB_ERR;
+    }
+
+    const char *content = http_get_root(http);
+    if (content == NULL) {
+        return USTB_ERR;
+    }
+
+    char current[MAX_VAR_LEN] = {0};
+    info_extract(current, content, "%[^'\"]s", "uid", EXT_QUOTED);
+    // if logged in, ask to use current user
+    if (strlen(current) != 0) {
+        gbuff_t prompt[1] = {gbuff_alloca(MAX_LINE_LEN)};
+        gbuff_appendf(prompt, "Login as current user? %s [Y/n] ", current);
+        char *input = linenoise(prompt->data);
+        print_log(DEBUG, "User input: '%s'\n", input);
+        if (strlen(input) == 0) {
+            // Default to 'y'
+            ok = 1;
+        } else {
+            char choise = tolower(input[0]);
+            if (choise == 'y') {
+                // Use current user
+                ok = 1;
+            }
+        }
+        linenoiseFree(input);
+    }
+
+    print_log(DEBUG, "Using current user: [%s]\n", ok ? "yes" : "no");
+
+    if (ok) {
+        strncpy(username, current, maxlen);
+    } else {
+        char *input = linenoise("Username: ");
+        if (strlen(input) != 0) {
+            strncpy(username, input, maxlen);
+        }
+        linenoiseFree(input);
+    }
+
+    return USTB_OK;
+}
+
 int
 cmd_login(int argc, char **argv) {
     int res;
@@ -431,20 +484,24 @@ cmd_login(int argc, char **argv) {
 
 #ifdef USE_INTERACTIVE
     if (config->interactive) {
-        // Get username and password from terminal with linenoise
-        // TODO 获取当前登录用户作为默认用户名
-        char *username = linenoise("Username: ");
-        if (username == NULL || strlen(username) == 0) {
+        char username[MAX_VAR_LEN] = {0};
+        USTB_RET res = get_username_from_prompt(username, sizeof(username));
+        if (res != USTB_OK) {
+            fprintf(stderr, "Failed to get username from prompt\n");
+            return EXIT_FAILURE;
+        }
+        print_log(DEBUG, "Using username: %s (%u)\n", username,
+                  strlen(username));
+        if (strlen(username) == 0) {
             fprintf(stderr, "Error: Username is required\n");
             return EXIT_FAILURE;
         }
         gbuff_appendf(account->username, "%s", username);
-        linenoiseFree(username);
 
         linenoiseMaskModeEnable();
         char *password = linenoise("Password: ");
         linenoiseMaskModeDisable();
-        if (password == NULL || strlen(password) == 0) {
+        if (strlen(password) == 0) {
             fprintf(stderr, "Error: Password is required\n");
             return EXIT_FAILURE;
         }

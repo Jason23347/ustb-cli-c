@@ -43,6 +43,7 @@ cmake .. \
 	-DWITH_ACCOUNT=on \
 	-DWITH_SPEEDTEST=on \
 	-DWITH_COMPLETION=on \
+	-DUSE_INTERACTIVE=on \
 	-DGB2312_DECODER="iconv"
 ```
 
@@ -56,6 +57,7 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
 	-DWITH_ACCOUNT=on \
 	-DWITH_SPEEDTEST=on \
 	-DWITH_COMPLETION=on \
+	-DUSE_INTERACTIVE=on \
 	-DGB2312_DECODER="iconv"
 ```
 
