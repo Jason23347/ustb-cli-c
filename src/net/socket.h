@@ -1,10 +1,11 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-typedef int SOCKET;
-static const SOCKET INVALID_SOCKET = -1;
-
 #include <stdint.h>
+
+#define INVALID_SOCKET -1
+
+typedef int SOCKET;
 
 void socket_init(void);
 void socket_end(void);
