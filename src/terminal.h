@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include <stdio.h>
+
 #define NORMAL       0
 #define BLACK        30
 #define RED          31
@@ -23,28 +25,46 @@
 
 #ifdef WITH_COLOR
 
-#define STR(text) #text
+#define STR_HELPER(x) #x
+#define STR(x)        STR_HELPER(x)
+#define color(code)   "\033[" STR(code) "m"
 
-#define color(code) "\033[" STR(code) "m"
 
 #define set_color(c)                                                           \
-    ((global_config.raw_output == 0) ? printf("\033[%dm", c) : ((void)0))
+    do {                                                                       \
+        if (global_config.raw_output == 0) {                                   \
+            printf("\033[%dm", (c));                                           \
+        }                                                                      \
+    } while (0)
+
 #define reset_color()                                                          \
-    ((global_config.raw_output == 0) ? printf("\033[%d;%dm", NORMAL, NORMAL)   \
-                                     : ((void)0))
+    do {                                                                       \
+        if (global_config.raw_output == 0) {                                   \
+            printf("\033[0m");                                                 \
+        }                                                                      \
+    } while (0)
 
 #define clear_line()                                                           \
-    ((global_config.raw_output == 0) ? printf("\r\033[K") : ((void)0))
+    do {                                                                       \
+        if (global_config.raw_output == 0) {                                   \
+            printf("\r\033[K");                                                \
+        }                                                                      \
+    } while (0)
+
 #define move_up_head()                                                         \
-    ((global_config.raw_output == 0) ? printf("\r\033[F") : ((void)0))
+    do {                                                                       \
+        if (global_config.raw_output == 0) {                                   \
+            printf("\r\033[F");                                                \
+        }                                                                      \
+    } while (0)
 
-#else /* WITH_COLOR */
+#else /* ifdef WITH_COLOR */
 
-#define color(...) ""
-#define set_color(...)
-#define reset_color(...)
-#define clear_line(...)
-#define move_up_head(...)
+#define color(...)        ""
+#define set_color(...)    ((void)0)
+#define reset_color(...)  ((void)0)
+#define clear_line(...)   ((void)0)
+#define move_up_head(...) ((void)0)
 
 #endif /* WITH_COLOR */
 
