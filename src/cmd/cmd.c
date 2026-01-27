@@ -273,16 +273,6 @@ global_config_parse(int argc, char **argv) {
         case 'o':
             const char *filename = cag_option_get_value(&context);
             if ((filename != NULL) && (filename[0] != '\0')) {
-                // If file does not exist, try to create it.
-                if (access(filename, F_OK) != 0) {
-                    FILE *file = fopen(filename, "w");
-                    if (file == NULL) {
-                        fprintf(stderr, "Cannot create log file: \"%s\"\n",
-                                filename);
-                        exit(EXIT_FAILURE);
-                    }
-                    fclose(file);
-                }
                 FILE *file = fopen(filename, "a");
                 if (file == NULL) {
                     fprintf(stderr, "Cannot open log file: \"%s\"\n", filename);
