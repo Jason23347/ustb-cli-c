@@ -664,6 +664,9 @@ static USTB_RET
 device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     const char *content =
         http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
+    if (content == NULL) {
+        return USTB_ERR;
+    }
 
     form->foo = account->username->data;
     form->bar = account->password->data;
@@ -671,6 +674,34 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     form->account = form->foo;
     md5(form->password, account->password->data);
     form->code = "";
+
+    return USTB_OK;
+}
+
+static USTB_RET
+device_get_randomcode(http_t *http) {
+    const char *content =
+        http_request(http, &gbuff_from_const(DRCOM_RANDOMCODE_PATH), NULL);
+    if (content == NULL) {
+        return USTB_ERR;
+    }
+
+    return USTB_OK;
+}
+
+static USTB_RET
+device_login(http_t *http, const device_form_t *form) {
+    const char *content;
+
+    gbuff_t data[1] = {gbuff_alloca(MAX_PATH_LEN)};
+    gbuff_appendf(data,
+                  "foo=%s&bar=%s&checkcode=%s&account=%s&password=%s&code=%s",
+                  form->foo, form->bar, form->checkcode, form->account,
+                  form->password, form->code);
+    content = http_request(http, &gbuff_from_const(DRCOM_LOGIN_PATH), data);
+    if (content == NULL) {
+        return USTB_ERR;
+    }
 
     return USTB_OK;
 }
@@ -780,30 +811,31 @@ devices_get_config(device_t *config, int argc, char **argv) {
 
 static USTB_RET
 devices_login(http_t *http, const account_t *account) {
-    const char *content;
+    USTB_RET res;
+
     device_form_t form[1];
 
+    http_enable_redirect(http);
+
     // 1. Get checkcode
-    content = http_request(http, &gbuff_from_const(DRCOM_FORM_PATH), NULL);
-    if (content == NULL) {
+    res = device_get_form(form, http, account);
+    if (res != USTB_OK) {
         return USTB_ERR;
     }
-    device_get_form(form, http, account);
 
     // 2. Get random code (never use)
-    content =
-        http_request(http, &gbuff_from_const(DRCOM_RANDOMCODE_PATH), NULL);
-    if (content == NULL) {
+    res = device_get_randomcode(http);
+    if (res != USTB_OK) {
         return USTB_ERR;
     }
 
+    http_disable_redirect(http);
+
     // 3. login request
-    gbuff_t data[1] = {gbuff_alloca(MAX_PATH_LEN)};
-    gbuff_appendf(data,
-                  "foo=%s&bar=%s&checkcode=%s&account=%s&password=%s&code=%s",
-                  form->foo, form->bar, form->checkcode, form->account,
-                  form->password, form->code);
-    content = http_request(http, &gbuff_from_const(DRCOM_LOGIN_PATH), data);
+    res = device_login(http, form);
+    if (res != USTB_OK) {
+        return USTB_ERR;
+    }
 
     return USTB_OK;
 }

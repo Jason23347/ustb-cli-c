@@ -42,7 +42,7 @@ int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 #define SPEEDTEST_PING_TESTS    10
 #define DRCOM_HOST              "zifuwu.ustb.edu.cn"
 #define DRCOM_PORT              443
-#define DRCOM_FORM_PATH         "/Self/login/?302=LI"
+#define DRCOM_FORM_PATH         "/Self/login"
 #define DRCOM_RANDOMCODE_PATH   "/Self/login/randomCode"
 #define DRCOM_LOGIN_PATH        "/Self/login/verify"
 #define DRCOM_DEVICES_PATH      "/Self/dashboard/getOnlineList?order=asc"
