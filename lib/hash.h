@@ -3,6 +3,6 @@
 
 #define MD5_LEN 33
 
-void md5(char *dest, const char *str);
+void md5(char *dest, const char *str, size_t len);
 
 #endif /* LIB_HASH_H */

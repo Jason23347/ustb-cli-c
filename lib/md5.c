@@ -161,9 +161,9 @@ md5_final() {
 }
 
 void
-md5(char *dest, const char *str) {
+md5(char *dest, const char *str, size_t len) {
     md5_init();
-    md5_update((const unsigned char *)str, strlen(str));
+    md5_update((const unsigned char *)str, len);
     unsigned char *digest = md5_final();
 
     for (int i = 0; i < 16; i++) {

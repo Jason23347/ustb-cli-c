@@ -672,7 +672,7 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
     form->bar = account->password->data;
     info_extract(form->checkcode, content, "%[^'\"]", "value", EXT_QUOTED);
     form->account = form->foo;
-    md5(form->password, account->password->data);
+    md5(form->password, account->password->data, account->password->len);
     form->code = "";
 
     return USTB_OK;

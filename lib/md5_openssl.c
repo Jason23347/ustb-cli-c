@@ -3,13 +3,13 @@
 #include "openssl/evp.h"
 
 void
-md5(char *dest, const char *str) {
+md5(char *dest, const char *str, size_t len) {
     unsigned char md[EVP_MAX_MD_SIZE];
     unsigned int md_len = 0;
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_md5(), NULL);
-    EVP_DigestUpdate(ctx, str, strlen(str));
+    EVP_DigestUpdate(ctx, str, len);
     EVP_DigestFinal_ex(ctx, md, &md_len);
     EVP_MD_CTX_free(ctx);
 
