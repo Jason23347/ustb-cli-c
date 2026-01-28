@@ -23,24 +23,26 @@
 #define BG_DARKGREEN 46
 #define BG_WHITE     47
 
+#define set_color(c)  __set_color(stdout, c)
+#define reset_color() __reset_color(stdout)
+
 #ifdef WITH_COLOR
 
 #define STR_HELPER(x) #x
 #define STR(x)        STR_HELPER(x)
 #define color(code)   "\033[" STR(code) "m"
 
-
-#define set_color(c)                                                           \
+#define __set_color(f, c)                                                      \
     do {                                                                       \
         if (global_config.raw_output == 0) {                                   \
-            printf("\033[%dm", (c));                                           \
+            fprintf((f), "\033[%dm", (c));                                     \
         }                                                                      \
     } while (0)
 
-#define reset_color()                                                          \
+#define __reset_color(f)                                                       \
     do {                                                                       \
         if (global_config.raw_output == 0) {                                   \
-            printf("\033[0m");                                                 \
+            fprintf((f), "\033[0m");                                           \
         }                                                                      \
     } while (0)
 
@@ -60,11 +62,11 @@
 
 #else /* ifdef WITH_COLOR */
 
-#define color(...)        ""
-#define set_color(...)    ((void)0)
-#define reset_color(...)  ((void)0)
-#define clear_line(...)   ((void)0)
-#define move_up_head(...) ((void)0)
+#define color(...)         ""
+#define __set_color(...)   ((void)0)
+#define __reset_color(...) ((void)0)
+#define clear_line(...)    ((void)0)
+#define move_up_head(...)  ((void)0)
 
 #endif /* WITH_COLOR */
 
