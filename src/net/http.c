@@ -97,7 +97,7 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
 
 fail:
 #ifdef USE_OPENSSL
-    ssl_free(&http->conn);
+    tls_cleanup(&http->conn);
 #endif
     return -1;
 }
@@ -109,7 +109,7 @@ http_free(http_t *http) {
     }
     gbuff_free(http->body);
 #ifdef USE_OPENSSL
-    ssl_free(&http->conn);
+    tls_cleanup(&http->conn);
 #endif
 }
 
@@ -124,7 +124,7 @@ http_connect(http_t *http) {
 #ifdef USE_OPENSSL
     // 如果启用了 SSL，执行 SSL 握手
     if (http->use_ssl) {
-        res = ssl_connect(&http->conn, http->domain);
+        res = tls_upgrade(&http->conn, http->domain);
         if (res != 0) {
             tcp_close(&http->conn);
             return -1;
