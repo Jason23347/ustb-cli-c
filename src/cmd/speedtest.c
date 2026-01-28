@@ -6,6 +6,7 @@
 #include "calc/interval.h"
 #include "net/http.h"
 #include "terminal.h"
+#include "thread.h"
 
 #include <cargs.h>
 
@@ -195,7 +196,7 @@ speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
     size_t base_size = config->filesizeMB / thread_count;
     size_t remainder = config->filesizeMB % thread_count;
 
-    pthread_t *threads = malloc(sizeof(pthread_t) * thread_count);
+    ustb_thread_t *threads = malloc(sizeof(ustb_thread_t) * thread_count);
     suseconds_t *intervals = malloc(sizeof(suseconds_t) * thread_count);
 
     struct timeval global_start, global_end;
@@ -213,11 +214,11 @@ speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
         arg->thread_id = i;
         arg->func = func;
 
-        pthread_create(&threads[i], NULL, speedtest_download_thread, arg);
+        ustb_thread_create(&threads[i], speedtest_download_thread, arg);
     }
 
     for (int i = 0; i < thread_count; i++) {
-        pthread_join(threads[i], NULL);
+        ustb_thread_join(threads[i]);
     }
 
     __asm__ __volatile__("" ::: "memory");
