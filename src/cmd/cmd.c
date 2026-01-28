@@ -186,61 +186,44 @@ print_default_help(int argc, char **argv) {
 
 int
 cmd_version(int argc, char **argv) {
-    printf("%s ", PACKAGE_NAME);
-    printf("v%s ", PACKAGE_VERSION);
-
-#if defined(NDEBUG) && !defined(WITH_COLOR)
-    /* Nothing */
-#else
-    printf("(");
+    printf("%s v%s", PACKAGE_NAME, PACKAGE_VERSION);
 #ifndef NDEBUG
-    printf("debug");
-#endif
-#if !defined(NDEBUG) && defined(WITH_COLOR)
-    printf(" ");
-#endif
+    printf(" (debug)");
+#endif /* ifndef NDEBUG */
+
 #ifdef WITH_COLOR
     set_color(YELLOW);
-    printf("color");
+    printf(" +color");
     reset_color();
 #endif
-    printf(")");
+#ifdef WITH_SSL
+    set_color(PURPLE);
+    printf(" +ssl");
+    reset_color();
 #endif
 
-    printf(
-#ifdef WITH_ACCOUNT
-        " +account"
-#endif
-
-#ifdef WITH_BALANCE
-        " +balance"
-#endif
-#ifdef WITH_SPEEDTEST
-        " +speedtest"
-#endif
-
-        "\n\n"
-        "Copyright  2025  Shuaicheng Zhu <jason23347@163.com>\n"
-        "\n"
-        "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF "
-        "ANY KIND, "
-        "EXPRESS OR\n"
-        "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
-        "MERCHANTABILITY,\n"
-        "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. "
-        "IN NO EVENT "
-        "SHALL THE\n"
-        "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, "
-        "DAMAGES OR "
-        "OTHER\n"
-        "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR "
-        "OTHERWISE, "
-        "ARISING FROM,\n"
-        "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR "
-        "OTHER "
-        "DEALINGS IN THE\n"
-        "SOFTWARE."
-        "\n\n");
+    printf("\n\n"
+           "Copyright  2025-2026 Shuaicheng Zhu <jason23347@163.com>\n"
+           "\n"
+           "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF "
+           "ANY KIND, "
+           "EXPRESS OR\n"
+           "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
+           "MERCHANTABILITY,\n"
+           "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. "
+           "IN NO EVENT "
+           "SHALL THE\n"
+           "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, "
+           "DAMAGES OR "
+           "OTHER\n"
+           "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR "
+           "OTHERWISE, "
+           "ARISING FROM,\n"
+           "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR "
+           "OTHER "
+           "DEALINGS IN THE\n"
+           "SOFTWARE."
+           "\n\n");
 
     return EXIT_SUCCESS;
 }
