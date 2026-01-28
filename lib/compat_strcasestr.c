@@ -1,4 +1,6 @@
-#if defined(__linux__) || defined(__gnu_linux__) || defined(__APPLE__)
+#include "config.h"
+
+#ifndef HAVE_STRCASESTR
 
 #define _GNU_SOURCE
 #include <string.h>
@@ -8,7 +10,7 @@ compat_strcasestr(const char *__haystack, const char *__needle) {
     return strcasestr(__haystack, __needle);
 }
 
-#else /* defined(__linux__) || defined(__gnu_linux__) || defined(__APPLE__) */
+#else /* ifndef HAVE_STRCASESTR */
 
 #include <ctype.h>
 #include <string.h>
@@ -39,5 +41,4 @@ compat_strcasestr(const char *__haystack, const char *__needle) {
     return NULL;
 }
 
-#endif
-/* defined(__linux__) || defined(__gnu_linux__) || defined(__APPLE__) */
+#endif /* ifndef HAVE_STRCASESTR */

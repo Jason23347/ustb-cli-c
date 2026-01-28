@@ -11,3 +11,5 @@
 #cmakedefine WITH_SPEEDTEST 1
 #cmakedefine WITH_COMPLETION 1
 #cmakedefine USE_INTERACTIVE 1
+
+#cmakedefine HAVE_STRCASESTR 1
