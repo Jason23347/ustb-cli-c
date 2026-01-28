@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
@@ -76,7 +76,7 @@ is_ipv6_address(const char *s) {
     return (inet_pton(AF_INET6, s, &addr6) == 1);
 }
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
 int
 ssl_init(tcp_t *tcp) {
     // 创建 SSL 上下文
@@ -130,7 +130,7 @@ tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode) {
 
 ssize_t
 tcp_read(const tcp_t *tcp, void *buffer, size_t size) {
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     if (tcp->ssl != NULL) {
         int n = SSL_read(tcp->ssl, buffer, size);
         if (n < 0) {
@@ -151,7 +151,7 @@ tcp_read(const tcp_t *tcp, void *buffer, size_t size) {
 
 ssize_t
 tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     if (tcp->ssl != NULL) {
         int n = SSL_write(tcp->ssl, buffer, size);
         if (n < 0) {
@@ -167,7 +167,7 @@ tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
     return write(tcp->fd, buffer, size);
 }
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
 
 static void
 tls_disconnect(tcp_t *tcp) {
@@ -175,11 +175,11 @@ tls_disconnect(tcp_t *tcp) {
     tcp->ssl = NULL;
 }
 
-#endif /* USE_OPENSSL */
+#endif /* WITH_SSL */
 
 void
 tcp_close(tcp_t *tcp) {
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     if (tcp->ssl != NULL) {
         SSL_shutdown(tcp->ssl);
         tls_disconnect(tcp);
@@ -188,7 +188,7 @@ tcp_close(tcp_t *tcp) {
     socket_close(tcp->fd);
 }
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
 
 int
 tls_upgrade(tcp_t *tcp, const char *sni_hostname) {
@@ -284,4 +284,4 @@ tls_cleanup(tcp_t *tcp) {
     }
 }
 
-#endif /* USE_OPENSSL */
+#endif /* WITH_SSL */

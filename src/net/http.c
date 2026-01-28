@@ -29,7 +29,7 @@ typedef struct http {
     tcp_t conn;
     cookiejar_t *cookiejar;
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     int use_ssl;
 #endif
 
@@ -53,7 +53,7 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     http->http_mode = http_mode;
 
     http->conn.fd = INVALID_SOCKET;
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     http->conn.ssl_ctx = NULL;
     http->conn.ssl = NULL;
     http->use_ssl = 0;
@@ -96,7 +96,7 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
     return 0;
 
 fail:
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     tls_cleanup(&http->conn);
 #endif
     return -1;
@@ -108,7 +108,7 @@ http_free(http_t *http) {
         cookiejar_free(http->cookiejar);
     }
     gbuff_free(http->body);
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     tls_cleanup(&http->conn);
 #endif
 }
@@ -121,7 +121,7 @@ http_connect(http_t *http) {
         return -1;
     }
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     // 如果启用了 SSL，执行 SSL 握手
     if (http->use_ssl) {
         res = tls_upgrade(&http->conn, http->domain);

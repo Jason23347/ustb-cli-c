@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
 #include <openssl/ssl.h>
 #endif
 
@@ -16,7 +16,7 @@
 
 typedef struct {
     SOCKET fd;
-#ifdef USE_OPENSSL
+#ifdef WITH_SSL
     SSL_CTX *ssl_ctx;
     SSL *ssl;
 #endif
