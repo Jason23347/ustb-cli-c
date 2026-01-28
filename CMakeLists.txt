@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(ustb-cli VERSION 1.3.5)
+project(ustb-cli VERSION 1.3.6)
 include(CheckFunctionExists)
 
 #---------------------------------------
