@@ -141,6 +141,7 @@ target_link_options(test_http PRIVATE --coverage ${WRAP_OPTS})
 # test commands
 # ===========================================
 add_executable(test_commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/info.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/balance.c
     redirect/redirect_stdout.c
     test_commands.c

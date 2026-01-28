@@ -1,0 +1,5 @@
+HTTP/1.1 302 Found
+Server: TestServer
+Location: https://example.com/target
+Content-length: 0
+
