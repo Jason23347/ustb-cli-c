@@ -479,7 +479,13 @@ http_get_flow(http_t *http, uint64_t *flow) {
         return USTB_ERR;
     }
 
-    info_extract(flow, content, uint64_spec, "flow", EXT_QUOTED);
+    info_t info[1];
+    USTB_RET res = info_extract(info, content);
+    if ((res != USTB_OK) || !logged_in(info)) {
+        return USTB_ERR;
+    }
+
+    *flow = info->flow;
 
     return USTB_OK;
 }

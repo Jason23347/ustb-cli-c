@@ -12,50 +12,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_VAR_LEN 40
-
-typedef struct info {
-    uint64_t curr_flow;
-    uint64_t curr_flow_v6;
-    char ipv4_addr[16];
-    char ipv6_addr[40];
-    int ipv6_mode;
-    unsigned fee;
-} info_t;
-
-static int
-info_has_ipv6(const info_t *info) {
-    int mode = info->ipv6_mode;
-    return ((mode == 4) || (mode == 12));
-}
-
-static int
-logged_in(const char *content) {
-    return strstr(content, "uid=") != NULL;
-}
-
-static USTB_RET
-info_fetch(info_t *info, const char *content) {
-    info_extract(&info->curr_flow, content, uint64_spec, "flow", EXT_QUOTED);
-    info_extract(&info->curr_flow_v6, content, uint64_spec, "v6df",
-                 EXT_UNQUOTED);
-    info_extract(&info->ipv6_mode, content, "%u", "v46m", EXT_UNQUOTED);
-    info_extract(&info->fee, content, "%u", "fee", EXT_QUOTED);
-    info_extract(&info->ipv4_addr, content, "%15[^']", "v4ip", EXT_QUOTED);
-    info_extract(&info->ipv6_addr, content, "%39[^']", "v6ip", EXT_QUOTED);
-
-    /* FIXME: Don't know why */
-    info->curr_flow_v6 /= 4;
-
-    return USTB_OK;
-}
-
 static void
 info_print(const info_t *info) {
     char flow_str[32], flow_v6_str[32];
 
-    flow_format(info->curr_flow, flow_str, sizeof(flow_str));
-    flow_format(info->curr_flow_v6, flow_v6_str, sizeof(flow_v6_str));
+    flow_format(info->flow, flow_str, sizeof(flow_str));
+    flow_format(info->flow_v6, flow_v6_str, sizeof(flow_v6_str));
 
     set_color(BLUE);
     printf("IPV4");
@@ -64,13 +26,13 @@ info_print(const info_t *info) {
     printf("IP Address:\t%.*s\n", (int)sizeof(info->ipv4_addr),
            info->ipv4_addr);
     printf("Flow used:\t%s\n", flow_str);
-    uint64_t left = flow_left(info->curr_flow);
+    uint64_t left = flow_left(info->flow);
     flow_format(left, flow_str, sizeof(flow_str));
     printf("Flow left:\t%s\n", flow_str);
 
     printf("\n");
 
-    if (!info_has_ipv6(info)) {
+    if (!has_ipv6(info)) {
         printf("IPV6 disabled\n");
     } else {
         set_color(GREEN);
@@ -84,8 +46,7 @@ info_print(const info_t *info) {
 
     printf("\n");
 
-    int saving_rate =
-        (100 * info->curr_flow_v6) / (info->curr_flow + info->curr_flow_v6);
+    int saving_rate = (100 * info->flow_v6) / (info->flow + info->flow_v6);
     printf("Flow saving rate (%%): 0.%02d\n", saving_rate);
 
     printf("\n");
@@ -104,23 +65,16 @@ cmd_info(int argc, char **argv) {
 
     const char *content = http_get_root(http);
     if (content == NULL) {
-        return USTB_ERR;
+        return EXIT_FAILURE;
     }
 
-    const char *p = strstr(content, "<script");
-    if (p == NULL) {
-        return USTB_ERR;
-    }
-
-    if (!logged_in(p)) {
-        set_color(YELLOW);
-        printf("Login required.\n");
-        reset_color();
-        return USTB_ERR;
-    }
-
-    res = info_fetch(info, p);
+    res = info_extract(info, content);
     if (res != USTB_OK) {
+        if (!logged_in(info)) {
+            set_color(YELLOW);
+            printf("Login required.\n");
+            reset_color();
+        }
         return EXIT_FAILURE;
     }
 
@@ -132,9 +86,8 @@ cmd_info(int argc, char **argv) {
 int
 cmd_fee(int argc, char **argv) {
     int c;
-    uint64_t curr_flow;
-    uint64_t fee_num;
     char fee_str[16];
+    info_t info[1];
 
     http_t *http = alloca(HTTP_T_SIZE);
     int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
@@ -147,24 +100,21 @@ cmd_fee(int argc, char **argv) {
         return USTB_ERR;
     }
 
-    if (!logged_in(content)) {
-        set_color(YELLOW);
-        printf("Login required.\n");
-        reset_color();
+    res = info_extract(info, content);
+    if (res != USTB_OK) {
+        if (!logged_in(info)) {
+            set_color(YELLOW);
+            printf("Login required.\n");
+            reset_color();
+        }
         return EXIT_FAILURE;
     }
 
-    const char *p = strstr(content, "<script");
-    if (p == NULL) {
-        print_log(ERROR, "Failed to get variables: %s\n", content);
-        return EXIT_FAILURE;
-    }
+    uint64_t flow = info->flow;
+    uint64_t fee_num = info->fee_num;
 
-    info_extract(&curr_flow, p, uint64_spec, "flow", EXT_QUOTED);
-    info_extract(&fee_num, p, "%u", "fee", EXT_QUOTED);
-
-    if (flow_over(curr_flow) > 0) {
-        fee_format(fee_str, sizeof(fee_str), fee_cost(curr_flow));
+    if (flow_over(flow) > 0) {
+        fee_format(fee_str, sizeof(fee_str), fee_cost(flow));
         c = cost_color(fee_str);
         printf("Money Cost: ");
         set_color(c);

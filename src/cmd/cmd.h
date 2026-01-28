@@ -5,21 +5,22 @@
 
 #include <cargs.h>
 #include <stddef.h>
+#include <stdint.h>
 
-#define info_extract(destPtr, srcStr, fmtStr, prefixStr, extQuoted)            \
-    do {                                                                       \
-        const struct extract ext[1] = {{                                       \
-            .dest = (destPtr),                                                 \
-            .src = (srcStr),                                                   \
-            .fmt = &gbuff_from_const(fmtStr),                                  \
-            .prefix = &gbuff_from_const(prefixStr),                            \
-            .quoted = extQuoted,                                               \
-        }};                                                                    \
-        int res = gbuff_extract(ext);                                          \
-        if (res < 0) {                                                         \
-            return USTB_ERR;                                                   \
-        }                                                                      \
-    } while (0)
+#define INFO_VAR_LEN 40
+
+typedef struct info {
+    // account
+    char username[INFO_VAR_LEN];
+    char nid[INFO_VAR_LEN];
+    uint64_t fee_num;
+    // flow & ip
+    uint64_t flow;
+    uint64_t flow_v6;
+    char ipv4_addr[16];
+    char ipv6_addr[40];
+    int ipv6_mode;
+} info_t;
 
 typedef int USTB_RET;
 static const USTB_RET USTB_OK = 0;
@@ -41,6 +42,10 @@ extern struct globconf {
     int raw_output; /* Output no color */
 #endif
 } global_config;
+
+USTB_RET info_extract(info_t *info, const char *content);
+int logged_in(const info_t *info);
+int has_ipv6(const info_t *info);
 
 int cmd_parse(int argc, char **argv);
 // default

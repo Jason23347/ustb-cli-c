@@ -274,8 +274,8 @@ login_url_path(gbuff_t *str, const login_t *config, const account_t *account) {
     } else {
         // Get username & password
         account_t my_account[1] = {{
-            .username = {gbuff_alloca(MAX_VAR_LEN)},
-            .password = {gbuff_alloca(MAX_VAR_LEN)},
+            .username = {gbuff_alloca(INFO_VAR_LEN)},
+            .password = {gbuff_alloca(INFO_VAR_LEN)},
         }};
 
         int res = account_load_env(my_account, config->env_filepath);
@@ -431,8 +431,12 @@ get_username_from_prompt(char *username, size_t maxlen) {
         return USTB_ERR;
     }
 
-    char current[MAX_VAR_LEN] = {0};
-    info_extract(current, content, "%[^'\"]s", "uid", EXT_QUOTED);
+    info_t info[1];
+    res = info_extract(info, content);
+    if ((res != USTB_OK) || !logged_in(info)) {
+        return USTB_ERR;
+    }
+    char *current = info->username;
     // if logged in, ask to use current user
     if (strlen(current) != 0) {
         gbuff_t prompt[1] = {gbuff_alloca(MAX_LINE_LEN)};
@@ -474,8 +478,8 @@ cmd_login(int argc, char **argv) {
     char ipv6_buf[40];
     login_t config[1] = {0};
     account_t account[1] = {{
-        .username = {gbuff_alloca(MAX_VAR_LEN)},
-        .password = {gbuff_alloca(MAX_VAR_LEN)},
+        .username = {gbuff_alloca(INFO_VAR_LEN)},
+        .password = {gbuff_alloca(INFO_VAR_LEN)},
     }};
 
     // Parse config
@@ -486,7 +490,7 @@ cmd_login(int argc, char **argv) {
 
 #ifdef USE_INTERACTIVE
     if (config->interactive) {
-        char username[MAX_VAR_LEN] = {0};
+        char username[INFO_VAR_LEN] = {0};
         USTB_RET res = get_username_from_prompt(username, sizeof(username));
         if (res != USTB_OK) {
             fprintf(stderr, "Failed to get username from prompt\n");
@@ -630,11 +634,21 @@ cmd_whoami(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    char username[MAX_VAR_LEN] = {0};
-    info_extract(username, content, "%[^'\"]s", "uid", EXT_QUOTED);
-
-    char nid[MAX_VAR_LEN] = {0};
-    info_extract(nid, content, "%[^'\"]s", "NID", EXT_QUOTED);
+    info_t info[1];
+    res = info_extract(info, content);
+    if (res != USTB_OK) {
+        if (!logged_in(info)) {
+            set_color(YELLOW);
+            printf("Login required.\n");
+            reset_color();
+        }
+        return USTB_ERR;
+    }
+    char *username = info->username;
+    char *nid = info->nid;
+    if ((strlen(username) == 0) || (strlen(nid) == 0)) {
+        return USTB_ERR;
+    }
 
     /* GBK → UTF-8 */
     gbuff_t nid_str[1] = {{
@@ -670,7 +684,29 @@ device_get_form(device_form_t *form, http_t *http, const account_t *account) {
 
     form->foo = account->username->data;
     form->bar = account->password->data;
-    info_extract(form->checkcode, content, "%[^'\"]", "value", EXT_QUOTED);
+    char fmt_str[] = "%[^'\"]";
+    char prefix_str[] = "value";
+    gbuff_t fmt[1] = {{
+        .data = fmt_str,
+        .len = strlen(fmt_str),
+        .cap = strlen(fmt_str) + 1,
+    }};
+    gbuff_t prefix[1] = {{
+        .data = prefix_str,
+        .len = strlen(prefix_str),
+        .cap = strlen(prefix_str) + 1,
+    }};
+    struct extract ext[1] = {{
+        .dest = form->checkcode,
+        .src = content,
+        .fmt = fmt,
+        .prefix = prefix,
+        .quoted = EXT_QUOTED,
+    }};
+    int res = gbuff_extract(ext);
+    if (res < 0) {
+        return USTB_ERR;
+    }
     form->account = form->foo;
     md5(form->password, account->password->data, account->password->len);
     form->code = "";
@@ -933,8 +969,8 @@ cmd_devices(int argc, char **argv) {
         .with_separator = 0,
     }};
     account_t account[1] = {{
-        .username = {gbuff_alloca(MAX_VAR_LEN)},
-        .password = {gbuff_alloca(MAX_VAR_LEN)},
+        .username = {gbuff_alloca(INFO_VAR_LEN)},
+        .password = {gbuff_alloca(INFO_VAR_LEN)},
     }};
     device_info_t devices[MAX_ONLINE_DEVICE_COUNT];
 
