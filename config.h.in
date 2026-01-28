@@ -1,5 +1,5 @@
 /* Package info */
-#define PACKAGE_NAME "@PROJECT_NAME@"
+#define PACKAGE_NAME    "@PROJECT_NAME@"
 #define PACKAGE_VERSION "@PROJECT_VERSION@"
 
 /* Define to 1 if debugging is disabled */
@@ -11,5 +11,6 @@
 #cmakedefine WITH_SPEEDTEST 1
 #cmakedefine WITH_COMPLETION 1
 #cmakedefine USE_INTERACTIVE 1
+#cmakedefine USE_THREADS 1
 
 #cmakedefine HAVE_STRCASESTR 1

@@ -25,7 +25,9 @@ typedef struct speedtest {
     int test_download;
     int show_in_bits;
     size_t filesizeMB;
+#ifdef USE_THREADS
     int thread_count;
+#endif
 } speedtest_t;
 
 typedef suseconds_t (*transfer_func_t)(size_t filesizeMB);
@@ -57,6 +59,7 @@ const struct cag_option speedtest_options[] = {
         .value_name = "NUM",
         .description = "Specify file size for each thread, default 100 in MB",
     },
+#ifdef USE_THREADS
     {
         .identifier = 'j',
         .access_letters = "j",
@@ -64,6 +67,7 @@ const struct cag_option speedtest_options[] = {
         .value_name = "NUM",
         .description = "Specify NUM threads to use, default 4",
     },
+#endif
     {
         .identifier = 'u',
         .access_letters = "u",
@@ -111,6 +115,7 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
                 config->filesizeMB = size;
             }
             break;
+#ifdef USE_THREADS
         case 'j':
             value = cag_option_get_value(&context);
             if (value != NULL && strlen(value) != 0) {
@@ -119,6 +124,7 @@ speedtest_get_config(speedtest_t *config, int argc, char **argv) {
                     config->thread_count = threads;
             }
             break;
+#endif
         case 'p':
             config->test_ping = 1;
             break;
@@ -190,6 +196,7 @@ speedtest_download_thread(void *arg) {
     return NULL;
 }
 
+#ifdef USE_THREADS
 static suseconds_t
 speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
     int thread_count = config->thread_count;
@@ -230,10 +237,15 @@ speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
 
     return total_interval;
 }
+#endif
 
 static suseconds_t
 speedtest_download(const speedtest_t *config) {
+#ifdef USE_THREADS
     return speedtest_transfer_concurrent(config, speedtest_download_single);
+#else
+    return speedtest_download_single(config->filesizeMB);
+#endif
 }
 
 static uint32_t
@@ -291,7 +303,11 @@ speedtest_upload_single(size_t filesizeMB) {
 
 static suseconds_t
 speedtest_upload(const speedtest_t *config) {
+#ifdef USE_THREADS
     return speedtest_transfer_concurrent(config, speedtest_upload_single);
+#else
+    return speedtest_upload_single(config->filesizeMB);
+#endif
 }
 
 static suseconds_t
@@ -398,7 +414,9 @@ cmd_speedtest(int argc, char **argv) {
         .test_upload = 0,
         .show_in_bits = 0,
         .filesizeMB = 100,
+#ifdef USE_THREADS
         .thread_count = 4,
+#endif
     }};
 
     res = speedtest_get_config(config, argc, argv);
@@ -421,9 +439,11 @@ cmd_speedtest(int argc, char **argv) {
         printf("\n");
     }
     /* Show thread count */
+#ifdef USE_THREADS
     if (config->test_download || config->test_upload) {
         printf("Using %d threads\n", config->thread_count);
     }
+#endif
     /* Download */
     if (config->test_download) {
         printf("Test download %lu MB\n", config->filesizeMB);

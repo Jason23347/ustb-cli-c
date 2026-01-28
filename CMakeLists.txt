@@ -31,6 +31,7 @@ option(WITH_BALANCE "Enable balance features: info, fee" ON)
 option(WITH_SPEEDTEST "Enable speedtest features: speedtest, monitor" ON)
 option(WITH_COMPLETION "Enable completion features: completion" OFF)
 option(USE_INTERACTIVE "Enable interactive input with linenoise" OFF)
+option(USE_THREADS "Enable multi-threaded speedtest implementation" ON)
 set(GB2312_DECODER "iconv" CACHE STRING "Select GB2312 decoding method: iconv, builtin, or disabled")
 set_property(CACHE GB2312_DECODER PROPERTY STRINGS "iconv" "builtin" "disabled")
 set(OPENSSL_ROOT_DIR "" CACHE PATH "OpenSSL root directory (optional)")
@@ -78,8 +79,14 @@ target_include_directories(ustb-cli PRIVATE
 IF(USE_ICONV)
 find_package(Iconv REQUIRED)
 ENDIF()
+
+IF(USE_THREADS)
 find_package(Threads REQUIRED)
-target_link_libraries(ustb-cli PRIVATE Threads::Threads m)
+target_link_libraries(ustb-cli PRIVATE Threads::Threads)
+ENDIF()
+
+target_link_libraries(ustb-cli PRIVATE m)
+
 
 #---------------------------------------
 # OpenSSL
