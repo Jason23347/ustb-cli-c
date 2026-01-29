@@ -298,7 +298,12 @@ completion_bash_print_function(const char *program) {
 int
 cmd_completion(int argc, char **argv) {
     const char *program = basename(argv[-1]);
-    const char *shell = (argc > 1) ? argv[1] : "zsh";
+    const char *shell;
+    if (argc > 1 && strlen(argv[1]) > 0) {
+        shell = argv[1];
+    } else {
+        shell = "zsh";
+    }
 
     if (strcmp(shell, "zsh") == 0) {
         completion_zsh_print_function(program);
