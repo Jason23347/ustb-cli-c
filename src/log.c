@@ -1,24 +1,29 @@
 #include "conf.h"
 
-#include "cmd/cmd.h"
 #include "terminal.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
+#ifdef USE_THREADS
+#include <pthread.h>
+#endif
 
 #define set_log_color(f, c)                                                    \
     do {                                                                       \
         __set_color((f), (c));                                                 \
     } while ((f) == stdout)
 
-#define reset_log_color(f)                                                  \
+#define reset_log_color(f)                                                     \
     do {                                                                       \
         __reset_color(f);                                                      \
     } while ((f) == stdout);
 
 enum LOG_LEVEL log_level = SILENT;
 FILE *log_file = NULL;
+#ifdef USE_THREADS
+static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 void
 log_init(void) {
@@ -62,6 +67,9 @@ print_log(enum LOG_LEVEL level, const char *fmt, ...) {
     }
 
     if (level <= log_level) {
+#ifdef USE_THREADS
+        pthread_mutex_lock(&log_mutex);
+#endif
         // print time
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
@@ -80,6 +88,10 @@ print_log(enum LOG_LEVEL level, const char *fmt, ...) {
         va_end(args);
 
         reset_log_color(log_file);
+
+#ifdef USE_THREADS
+        pthread_mutex_unlock(&log_mutex);
+#endif
 
         return ret;
     }
