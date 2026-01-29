@@ -1,5 +1,6 @@
 #include "conf.h"
 
+#include "cmd/cmd.h"
 #include "terminal.h"
 
 #include <stdarg.h>
