@@ -30,10 +30,8 @@ micro2sec(suseconds_t microsec) {
 
 double
 speed_per_sec(uint64_t flowKB, suseconds_t microsec) {
-    return (double)(flowKB * MILLION) / microsec;
-}
-
-double
-random_d() {
-    return (double)(rand()) / RAND_MAX;
+    if (microsec == 0) {
+        return 0;
+    }
+    return (double)(flowKB * MILLION) / (double)microsec;
 }
