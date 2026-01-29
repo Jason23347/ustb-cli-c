@@ -162,13 +162,13 @@ speedtest_download_single(size_t filesizeMB) {
         return 0;
     }
 
-    gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
+    gbuff_t path[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
-    gbuff_appendf(str, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
+    gbuff_appendf(path, "%s?r=%lf&ckSize=%u", SPEEDTEST_DOWNLOAD_PATH, r,
                   (unsigned int)filesizeMB);
 
     http_connect(http);
-    http_send_request(http, str, NULL);
+    http_send_request(http, path, NULL);
     http_section(http, buf, sizeof(buf));
 
     total = filesizeMB * ((MB * 1024) / sizeof(buf));
@@ -204,7 +204,14 @@ speedtest_transfer_concurrent(const speedtest_t *config, transfer_func_t func) {
     size_t remainder = config->filesizeMB % thread_count;
 
     ustb_thread_t *threads = malloc(sizeof(ustb_thread_t) * thread_count);
+    if (threads == NULL) {
+        return 0;
+    }
     suseconds_t *intervals = malloc(sizeof(suseconds_t) * thread_count);
+    if (intervals == NULL) {
+        free(threads);
+        return 0;
+    }
 
     struct timeval global_start, global_end;
 
@@ -248,16 +255,10 @@ speedtest_download(const speedtest_t *config) {
 #endif
 }
 
-static uint32_t
-lcg_next(uint32_t *seed) {
-    *seed = (*seed) * 1664525u + 1013904223u;
-    return *seed;
-}
-
 static void
-fill_random_with_seed(uint8_t *buf, size_t len, uint32_t *seed) {
+fill_random_with_seed(int *buf, size_t len) {
     for (size_t i = 0; i < len; ++i) {
-        buf[i] = (uint8_t)(lcg_next(seed) >> 24);
+        buf[i] = rand();
     }
 }
 
@@ -266,7 +267,6 @@ speedtest_upload_single(size_t filesizeMB) {
     print_log(DEBUG, "Upload thread: filesize %lu MB\n", filesizeMB);
 
     double r;
-    uint32_t seed;
     int total;
     char buf[MAX_BUF_SIZE];
     struct timeval start, end;
@@ -277,16 +277,15 @@ speedtest_upload_single(size_t filesizeMB) {
         return 0;
     }
 
-    gbuff_t str[1] = {gbuff_alloca(MAX_BUF_SIZE)};
+    gbuff_t path[1] = {gbuff_alloca(MAX_BUF_SIZE)};
     r = random_d();
-    gbuff_appendf(str, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
+    gbuff_appendf(path, "%s?r=%lf", SPEEDTEST_UPLOAD_PATH, r);
 
     http_connect(http);
 
-    total = filesizeMB * ((1024 * 1024) / sizeof(buf));
-    seed = rand();
+    total = filesizeMB * ((MB * 1024) / sizeof(buf));
 
-    fill_random_with_seed((uint8_t *)buf, sizeof(buf), &seed);
+    fill_random_with_seed(buf, sizeof(buf) / sizeof(int));
 
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
