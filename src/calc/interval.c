@@ -1,6 +1,7 @@
 #include "interval.h"
 
-#include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
 
 #define MILLION 1000000
 
