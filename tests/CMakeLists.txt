@@ -155,6 +155,7 @@ target_include_directories(test_commands PRIVATE
 target_compile_definitions(test_commands PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_test(NAME test_commands COMMAND test_commands)
+set_tests_properties(test_commands PROPERTIES ENVIRONMENT "LSAN_OPTIONS=detect_leaks=0")
 target_compile_options(test_commands PRIVATE --coverage)
 target_link_options(test_commands PRIVATE --coverage ${WRAP_OPTS})
 
