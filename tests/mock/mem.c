@@ -21,8 +21,8 @@ typedef struct {
 
 static site_slot_t site_table[SITE_HASH_SIZE];
 static pthread_mutex_t site_lock = PTHREAD_MUTEX_INITIALIZER;
-static atomic_int next_site_id = ATOMIC_VAR_INIT(1);  /* 下一个分配的 site id */
-static atomic_int fail_site_id = ATOMIC_VAR_INIT(-1); /* -1 表示不失败 */
+static atomic_int next_site_id = 1;  /* 下一个分配的 site id */
+static atomic_int fail_site_id = -1; /* -1 表示不失败 */
 
 static void mock_mem_init(void) __attribute__((constructor));
 static void
