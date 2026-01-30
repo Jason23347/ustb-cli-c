@@ -267,15 +267,16 @@ login_url_path(gbuff_t *str, const login_t *config, const account_t *account) {
     const gbuff_t *username;
     const gbuff_t *password;
 
+    // Get username & password
+    account_t my_account[1] = {{
+        .username = {gbuff_alloca(INFO_VAR_LEN)},
+        .password = {gbuff_alloca(INFO_VAR_LEN)},
+    }};
+
     if (account != NULL) {
         username = account->username;
         password = account->password;
     } else {
-        // Get username & password
-        account_t my_account[1] = {{
-            .username = {gbuff_alloca(INFO_VAR_LEN)},
-            .password = {gbuff_alloca(INFO_VAR_LEN)},
-        }};
 
         int res = account_load_env(my_account, config->env_filepath);
         if (res != USTB_OK) {
