@@ -99,6 +99,9 @@ fail:
 #ifdef WITH_SSL
     tls_cleanup(&http->conn);
 #endif
+    if (http->cookiejar != NULL) {
+        cookiejar_free(http->cookiejar);
+    }
     return -1;
 }
 
