@@ -97,7 +97,7 @@ cmd_fee(int argc, char **argv) {
 
     const char *content = http_get_root(http);
     if (content == NULL) {
-        return USTB_ERR;
+        return EXIT_FAILURE;
     }
 
     res = info_extract(info, content);
