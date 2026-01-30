@@ -54,7 +54,7 @@ target_include_directories(mock PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 target_link_libraries(mock PRIVATE cmocka::cmocka)
-target_compile_options(mock PRIVATE --coverage)
+target_compile_options(mock PRIVATE --coverage -Wno-implicit-function-declaration)
 target_compile_definitions(mock PRIVATE main=mock_text_main)
 
 # ===========================================
