@@ -143,16 +143,36 @@ target_link_options(test_http PRIVATE --coverage ${WRAP_OPTS})
 add_executable(test_commands
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/info.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/balance.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/account.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/speedtest.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cmd/cmd.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/thread.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/decode.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/md5.c
     redirect/redirect_stdout.c
     test_commands.c
 )
-target_link_libraries(test_commands PRIVATE mock cmocka::cmocka)
+# cargs 在仓库根 external 下，需显式指定 binary_dir（源在当前源树外）
+add_subdirectory(
+    ${CMAKE_CURRENT_SOURCE_DIR}/../external/cargs
+    ${CMAKE_CURRENT_BINARY_DIR}/cargs
+)
+target_include_directories(test_commands PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../external/cargs/include)
+target_link_libraries(test_commands PRIVATE mock cargs cmocka::cmocka)
 target_include_directories(test_commands PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/..
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
-target_compile_definitions(test_commands PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(test_commands PRIVATE
+    TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    TEST_COMMANDS_WITH_CMD
+    WITH_ACCOUNT
+    WITH_BALANCE
+    WITH_SPEEDTEST
+    USE_ICONV
+    USE_THREADS
+)
 
 add_test(NAME test_commands COMMAND test_commands)
 set_tests_properties(test_commands PROPERTIES ENVIRONMENT "LSAN_OPTIONS=detect_leaks=0")

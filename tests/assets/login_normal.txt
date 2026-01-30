@@ -29,6 +29,10 @@ eport=-1,eclass=1;//
 flow0=flow%1024;flow1=flow-flow0;flow0=flow0*1000;flow0=flow0-flow0%1024;fee1=fee-fee%100;
 flow3='.';
 
+/////// for post request check
+"result":1
+/////// for post request check
+
 /** 哆点参数 start */
 //1.基本参数
 portalid='';//门户ID

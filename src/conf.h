@@ -25,17 +25,17 @@ void log_set_file(FILE *file);
 void log_set_level(enum LOG_LEVEL level);
 int print_log(enum LOG_LEVEL level, const char *fmt, ...);
 
-#define LOGIN_HOST              "202.204.48.82"
-#define LOGIN_PORT              80
-#define LOGIN_PATH              "/drcom/login"
-#define CIPPV6_DOMAIN           "cippv6.ustb.edu.cn"
-#define CIPPV6_PORT             80
-#define CIPPV6_PATH             "/get_ip.php"
-#define SPEEDTEST_DOMAIN        "speed.ustb.edu.cn"
+#define LOGIN_HOST       "202.204.48.82"
+#define LOGIN_PORT       80
+#define LOGIN_PATH       "/drcom/login"
+#define CIPPV6_DOMAIN    "cippv6.ustb.edu.cn"
+#define CIPPV6_PORT      80
+#define CIPPV6_PATH      "/get_ip.php"
+#define SPEEDTEST_DOMAIN "speed.ustb.edu.cn"
 #ifdef USE_SSL
-#define SPEEDTEST_PORT          443
+#define SPEEDTEST_PORT 443
 #else
-#define SPEEDTEST_PORT          80
+#define SPEEDTEST_PORT 80
 #endif /* USE_SSL */
 #define SPEEDTEST_UPLOAD_PATH   "/backend/empty.php"
 #define SPEEDTEST_DOWNLOAD_PATH "/backend/garbage.php"
