@@ -3,7 +3,7 @@ project(UnitTests C)
 
 enable_testing()
 
-set(CMAKE_C_FLAGS "-g -O0")
+set(CMAKE_C_FLAGS "-g -O0 -fsanitize=address,undefined")
 
 # CMocka
 include(FetchContent)
