@@ -22,7 +22,6 @@
 #include <unistd.h>
 
 #define MAX_LINE_LEN            128
-#define MAX_VAR_LEN             40
 #define MAX_PATH_LEN            200
 #define URLENCODED_IPV6_MAX_LEN (40 + 7 * 2)
 #define MAC_HEX_LEN             12
@@ -416,10 +415,9 @@ login_request(const gbuff_t *path) {
 
 #ifdef USE_INTERACTIVE
 static USTB_RET
-get_username_from_prompt(char *username, size_t maxlen) {
-    int ok = 0; // whether to use current logged in user
+get_username_from_webpage(char *username, size_t len) {
+    assert(username != NULL);
 
-    // Get username and password from terminal with linenoise
     http_t *http = alloca(HTTP_T_SIZE);
     int res = http_init(http, LOGIN_HOST, LOGIN_PORT, IPV4_ONLY);
     if (res != 0) {
@@ -434,11 +432,24 @@ get_username_from_prompt(char *username, size_t maxlen) {
     info_t info[1];
     res = info_extract(info, content);
     if ((res != USTB_OK) || !logged_in(info)) {
+        print_log(DEBUG, "Not logged in\n");
         return USTB_ERR;
     }
-    char *current = info->username;
+
+    strncpy(username, info->username, len);
+
+    return USTB_OK;
+}
+
+static USTB_RET
+get_username_from_prompt(char *username, size_t maxlen) {
+    int ok = 0; // whether to use current logged in user
+
+    // Get username and password from terminal with linenoise
+    char current[INFO_VAR_LEN];
+    USTB_RET res = get_username_from_webpage(current, sizeof(INFO_VAR_LEN));
     // if logged in, ask to use current user
-    if (strlen(current) != 0) {
+    if ((res == USTB_OK) && (strlen(current) != 0)) {
         gbuff_t prompt[1] = {gbuff_alloca(MAX_LINE_LEN)};
         gbuff_appendf(prompt, "Login as current user? %s [Y/n] ", current);
         char *input = linenoise(prompt->data);
