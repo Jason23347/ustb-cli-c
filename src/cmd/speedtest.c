@@ -256,7 +256,7 @@ speedtest_download(const speedtest_t *config) {
 }
 
 static void
-fill_random_with_seed(int *buf, size_t len) {
+fill_random(int *buf, size_t len) {
     for (size_t i = 0; i < len; ++i) {
         buf[i] = rand();
     }
@@ -268,7 +268,7 @@ speedtest_upload_single(size_t filesizeMB) {
 
     double r;
     int total;
-    char buf[MAX_BUF_SIZE];
+    int buf[MAX_BUF_SIZE / sizeof(int)];
     struct timeval start, end;
 
     http_t *http = alloca(HTTP_T_SIZE);
@@ -285,7 +285,7 @@ speedtest_upload_single(size_t filesizeMB) {
 
     total = filesizeMB * ((MB * 1024) / sizeof(buf));
 
-    fill_random_with_seed(buf, sizeof(buf) / sizeof(int));
+    fill_random(buf, sizeof(buf) / sizeof(int));
 
     __asm__ __volatile__("" ::: "memory");
     gettimeofday(&start, NULL);
