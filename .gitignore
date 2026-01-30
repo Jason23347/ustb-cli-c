@@ -1,3 +1,4 @@
 .cache/
+scripts/
 .vscode
 build*/
