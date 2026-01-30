@@ -141,7 +141,7 @@ gbuff_concat(gbuff_t *dest, const gbuff_t *src) {
 int
 gbuff_extract(const struct extract *data) {
     int res = 0;
-    char dummy[2];
+    char dummy[2][2];
 
     const gbuff_t *prefix = data->prefix;
     const gbuff_t *fmt = data->fmt;
@@ -161,7 +161,7 @@ gbuff_extract(const struct extract *data) {
     if (quoted) {
         const char percent = '%';
         gbuff_appendf(tmp, "%c['\"]%s%c['\"]", percent, fmt->data, percent);
-        res = sscanf(p, tmp->data, &dummy[0], dest, &dummy[1]);
+        res = sscanf(p, tmp->data, dummy[0], dest, dummy[1]);
     } else {
         gbuff_appendf(tmp, "%s", fmt->data);
         res = sscanf(p, tmp->data, dest);
