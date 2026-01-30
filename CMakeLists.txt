@@ -42,6 +42,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     elseif(GIT_COMMIT_HASH)
         set(VERSION_DISPLAY "v${PROJECT_VERSION}+${GIT_COMMIT_HASH}")
     endif()
+    # 检查是否有未提交的更改
+    execute_process(
+        COMMAND git status --porcelain
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_STATUS_PORCELAIN
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(GIT_STATUS_PORCELAIN)
+        set(VERSION_DISPLAY "${VERSION_DISPLAY} (dirty)")
+    endif()
 endif()
 if(NOT GIT_COMMIT_HASH)
     set(GIT_COMMIT_HASH "unknown")
