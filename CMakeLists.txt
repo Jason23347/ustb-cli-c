@@ -17,6 +17,36 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-DNDEBUG -g -O2")
 # Check for functions before generating config.h
 check_function_exists(strcasestr HAVE_STRCASESTR)
 
+string(TIMESTAMP CONFIGURE_TIME "%Y-%m-%d %H:%M:%S" UTC)
+
+set(GIT_COMMIT_HASH "")
+set(GIT_TAG "")
+set(VERSION_DISPLAY "v${PROJECT_VERSION}")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND git rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    execute_process(
+        COMMAND git describe --exact-match --tags HEAD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_TAG
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(GIT_TAG)
+        set(VERSION_DISPLAY "${GIT_TAG}")
+    elseif(GIT_COMMIT_HASH)
+        set(VERSION_DISPLAY "v${PROJECT_VERSION}+${GIT_COMMIT_HASH}")
+    endif()
+endif()
+if(NOT GIT_COMMIT_HASH)
+    set(GIT_COMMIT_HASH "unknown")
+endif()
+
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/config.h

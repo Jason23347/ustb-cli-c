@@ -1,6 +1,9 @@
 /* Package info */
 #define PACKAGE_NAME    "@PROJECT_NAME@"
 #define PACKAGE_VERSION "@PROJECT_VERSION@"
+#define VERSION_DISPLAY "@VERSION_DISPLAY@"
+#define CONFIGURE_TIME  "@CONFIGURE_TIME@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
 
 /* Define to 1 if debugging is disabled */
 #cmakedefine NDEBUG 1

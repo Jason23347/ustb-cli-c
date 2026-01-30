@@ -186,7 +186,7 @@ print_default_help(int argc, char **argv) {
 
 int
 cmd_version(int argc, char **argv) {
-    printf("%s v%s", PACKAGE_NAME, PACKAGE_VERSION);
+    printf("%s %s", PACKAGE_NAME, VERSION_DISPLAY);
 #ifndef NDEBUG
     printf(" (debug)");
 #endif /* ifndef NDEBUG */
@@ -202,8 +202,10 @@ cmd_version(int argc, char **argv) {
     reset_color();
 #endif
 
-    printf("\n\n"
-           "Copyright  2025-2026 Shuaicheng Zhu <jason23347@163.com>\n"
+    set_color(BLUE);
+    printf("\nBuilt on " CONFIGURE_TIME " UTC\n\n");
+    reset_color();
+    printf("Copyright  2025-2026 Shuaicheng Zhu <jason23347@163.com>\n"
            "\n"
            "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF "
            "ANY KIND, "
