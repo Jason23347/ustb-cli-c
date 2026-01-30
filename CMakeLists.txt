@@ -203,3 +203,10 @@ if(USE_INTERACTIVE)
     target_sources(ustb-cli PRIVATE external/linenoise/linenoise.c)
     target_include_directories(ustb-cli PRIVATE external/linenoise)
 endif()
+
+#---------------------------------------
+# Install (only ustb-cli executable)
+#---------------------------------------
+install(TARGETS ustb-cli
+    RUNTIME DESTINATION bin
+)
