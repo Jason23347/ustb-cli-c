@@ -78,7 +78,7 @@ is_ipv6_address(const char *s) {
 
 #ifdef WITH_SSL
 int
-ssl_init(tcp_t *tcp) {
+tls_init(tcp_t *tcp) {
     // 创建 SSL 上下文
     tcp->ssl_ctx = SSL_CTX_new(TLS_client_method());
     if (tcp->ssl_ctx == NULL) {

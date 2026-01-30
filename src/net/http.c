@@ -63,7 +63,7 @@ http_init(http_t *http, const char *domain, uint16_t port, int http_mode) {
         http->use_ssl = 1;
 
         // 初始化 SSL 上下文
-        if (ssl_init(&http->conn) != 0) {
+        if (tls_init(&http->conn) != 0) {
             goto fail;
         }
     }

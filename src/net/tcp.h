@@ -22,7 +22,7 @@ typedef struct {
 #endif
 } tcp_t;
 
-int ssl_init(tcp_t *tcp);
+int tls_init(tcp_t *tcp);
 int tls_upgrade(tcp_t *tcp, const char *sni_hostname);
 
 int tcp_connect(tcp_t *tcp, const char *domain, uint16_t port, int ip_mode);
