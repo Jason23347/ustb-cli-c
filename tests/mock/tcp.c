@@ -22,11 +22,13 @@ tcp_close(tcp_t *tcp) {
 
 ssize_t
 tcp_read(const tcp_t *tcp, void *buffer, size_t size) {
+    usleep(3);
     return read(tcp->fd, buffer, size);
 }
 
 ssize_t
 tcp_write(const tcp_t *tcp, const void *buffer, size_t size) {
+    usleep(5);
     return size;
 }
 

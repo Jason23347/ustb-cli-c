@@ -13,17 +13,17 @@ Content-length: 2920
 <meta id="viewport" name="viewport" content="target-densitydpi=device-dpi,width=640px,user-scalable=yes">
 <meta name="renderer" content="webkit" />
 <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE">
-<title>æ³¨é”€é¡µ</title>
+<title>×¢ÏúÒ³</title>
 <!--Dr.COMWebLoginID_1.htm-->
 <link rel="stylesheet" type="text/css" href="b80.css" />
 <script type="text/javascript">
 time='82726     ';flow='47296514  ';fsele=1;fee='1145100    ';xsele=0;xip='000.000.000.000.';
 cvid=0,pvid=0;
 pwm=1;v6af=3648709150;v6df=4282572160;uid='U202412345';pwd='';v46m=4;v4ip='114.51.41.19';v6ip='2001:0da8::6666';// :0000:0000:0000:0000:0000:0000:0000';////
-zxopt=1;//1ä¸ºæ™®é€šï¼Œ2\4\5ä¸ºä¸“çº¿ä¸å¯ç”¨ï¼Œ6\9ä¸ºä¸“çº¿å¯ç”¨ --1011.628(64)ä»¥ä¸Šå†…æ ¸æ‰æ”¯æŒ
+zxopt=1;//1ÎªÆÕÍ¨£¬2\4\5Îª×¨Ïß²»¿ÉÓÃ£¬6\9Îª×¨Ïß¿ÉÓÃ --1011.628(64)ÒÔÉÏÄÚºË²ÅÖ§³Ö
 oltime=4294967295;olflow=225271808;lip='114.51.41.19';stime='2025-10-23 22:02:00';etime='2025-10-23 22:03:00';
-NID='å´å½¦ç¥–';                                              ///
-olmm=1;olm5=0;//20170821æ–°åŠ 
+NID='ÎâÑå×æ';                                              ///
+olmm=1;olm5=0;//20170821ĞÂ¼Ó
 eport=-1,eclass=1;//
 
 flow0=flow%1024;flow1=flow-flow0;flow0=flow0*1000;flow0=flow0-flow0%1024;fee1=fee-fee%100;
@@ -33,56 +33,56 @@ flow3='.';
 "result":1
 /////// for post request check
 
-/** å“†ç‚¹å‚æ•° start */
-//1.åŸºæœ¬å‚æ•°
-portalid='';//é—¨æˆ·ID
-portalname='';//é—¨æˆ·åç§°
-//2.å¯é€‰å‚æ•°
-portalver='4.0';//é—¨æˆ·ç‰ˆæœ¬
-serialno='';//åºåˆ—å·
-logourl='';//é—¨æˆ·logo
-bannerurl='';//æ¨ªå¹…å¹¿å‘Š
-welcome='';//æ¬¢è¿è¯
-businessurl='';//ä¸šåŠ¡æ¥å£
-//3.æ—è·¯å‚æ•°
-authexenable='0';//æ˜¯å¦å¯ç”¨æ—è·¯æ‰©å±•æ¨¡å¼
-authtype=1;//ç™»å½•åè®®
-authloginIP='';//ç™»å½•IP
-authloginport=801;//ç™»å½•ç«¯å£
-authloginpath='/eportal/?c=ACSetting&a=Login';//ç™»å½•è·¯å¾„
-authloginparam='url=drappal'; //ç™»å½•å‚æ•°
-authuserfield='DDDDD';//è´¦å·èŠ‚ç‚¹
-authpassfield='upass';//å¯†ç èŠ‚ç‚¹
-terminalidentity=1;//ç»ˆç«¯è¯†åˆ«æ ‡è¯† å…ˆé…ç½®æˆå¡«å†™
-authlogouttype=1;//æ³¨é”€åè®®
-authlogoutIP='';//æ³¨é”€IP
-authlogoutport=801;//æ³¨é”€ç«¯å£
-authlogoutpath='/eportal/?c=ACSetting&a=Logout&ver=1.0';//æ³¨é”€è·¯å¾„
-authlogoutparam='url=drappal';//æ³¨é”€å‚æ•°
-authlogoutpost='';//æ³¨é”€postå‚æ•°
-querydelay=0;//ç™»å½•åå»¶æ—¶æŸ¥è¯¢ç½‘ç»œçŠ¶æ€
-querytype=1;//çŠ¶æ€æŸ¥è¯¢åè®®
-queryIP='';//çŠ¶æ€æŸ¥è¯¢IP
-queryport=80;//çŠ¶æ€æŸ¥è¯¢ç«¯å£
-querypost='';//çŠ¶æ€æŸ¥è¯¢postå‚æ•°
-querypath='/';//çŠ¶æ€æŸ¥è¯¢è·¯å¾„
-queryparam='';//çŠ¶æ€æŸ¥è¯¢å‚æ•°
-authsuccess='Dr.COMWebLoginID_3.htm';//ç™»å½•æˆåŠŸæ ‡å¿—
-authfail='Dr.COMWebLoginID_2.htm';//ç™»å½•å¤±è´¥æ ‡å¿—
+/** ¶ßµã²ÎÊı start */
+//1.»ù±¾²ÎÊı
+portalid='';//ÃÅ»§ID
+portalname='';//ÃÅ»§Ãû³Æ
+//2.¿ÉÑ¡²ÎÊı
+portalver='4.0';//ÃÅ»§°æ±¾
+serialno='';//ĞòÁĞºÅ
+logourl='';//ÃÅ»§logo
+bannerurl='';//ºá·ù¹ã¸æ
+welcome='';//»¶Ó­´Ê
+businessurl='';//ÒµÎñ½Ó¿Ú
+//3.ÅÔÂ·²ÎÊı
+authexenable='0';//ÊÇ·ñÆôÓÃÅÔÂ·À©Õ¹Ä£Ê½
+authtype=1;//µÇÂ¼Ğ­Òé
+authloginIP='';//µÇÂ¼IP
+authloginport=801;//µÇÂ¼¶Ë¿Ú
+authloginpath='/eportal/?c=ACSetting&a=Login';//µÇÂ¼Â·¾¶
+authloginparam='url=drappal'; //µÇÂ¼²ÎÊı
+authuserfield='DDDDD';//ÕËºÅ½Úµã
+authpassfield='upass';//ÃÜÂë½Úµã
+terminalidentity=1;//ÖÕ¶ËÊ¶±ğ±êÊ¶ ÏÈÅäÖÃ³ÉÌîĞ´
+authlogouttype=1;//×¢ÏúĞ­Òé
+authlogoutIP='';//×¢ÏúIP
+authlogoutport=801;//×¢Ïú¶Ë¿Ú
+authlogoutpath='/eportal/?c=ACSetting&a=Logout&ver=1.0';//×¢ÏúÂ·¾¶
+authlogoutparam='url=drappal';//×¢Ïú²ÎÊı
+authlogoutpost='';//×¢Ïúpost²ÎÊı
+querydelay=0;//µÇÂ¼ºóÑÓÊ±²éÑ¯ÍøÂç×´Ì¬
+querytype=1;//×´Ì¬²éÑ¯Ğ­Òé
+queryIP='';//×´Ì¬²éÑ¯IP
+queryport=80;//×´Ì¬²éÑ¯¶Ë¿Ú
+querypost='';//×´Ì¬²éÑ¯post²ÎÊı
+querypath='/';//×´Ì¬²éÑ¯Â·¾¶
+queryparam='';//×´Ì¬²éÑ¯²ÎÊı
+authsuccess='Dr.COMWebLoginID_3.htm';//µÇÂ¼³É¹¦±êÖ¾
+authfail='Dr.COMWebLoginID_2.htm';//µÇÂ¼Ê§°Ü±êÖ¾
 isquery=0;
 authhost='';
 authoffpost='';
-charset='gb2312';//é¡µé¢ç¼–ç 
-exparam=0;//æ‰©å±•æ ‡å¿—ä½
-//4.è¿è¥å•†é€‰æ‹©
-carrier='{"yys":{"title": "æœåŠ¡ç±»å‹,"mode":"radiobutton","type":"0","data":[{"id":"1","name":"æ ¡å›­ç”¨æˆ·","suffix":""},{"id":"2","name":"æ ¡å›­ç”µä¿¡","suffix":"@dx"},{"id":"3","name":"æ ¡å›­è”é€š","suffix":"@lt"},{"id":"4","name":"æ ¡å›­å…¶ä»–","suffix":""}],"defaultID":"1"}}';//è¿è¥å•†é€‰æ‹©
-//5.é™åˆ¶éå“†ç‚¹å®¢æˆ·ç«¯ç™»é™†
-//æŠŠåŸå…ˆDr.COMWebLoginID_ æ”¹æˆ: Dr.COM1.0WebLoginID_
-/** å“†ç‚¹å‚æ•° end */
+charset='gb2312';//Ò³Ãæ±àÂë
+exparam=0;//À©Õ¹±êÖ¾Î»
+//4.ÔËÓªÉÌÑ¡Ôñ
+carrier='{"yys":{"title": "·şÎñÀàĞÍ,"mode":"radiobutton","type":"0","data":[{"id":"1","name":"Ğ£Ô°ÓÃ»§","suffix":""},{"id":"2","name":"Ğ£Ô°µçĞÅ","suffix":"@dx"},{"id":"3","name":"Ğ£Ô°ÁªÍ¨","suffix":"@lt"},{"id":"4","name":"Ğ£Ô°ÆäËû","suffix":""}],"defaultID":"1"}}';//ÔËÓªÉÌÑ¡Ôñ
+//5.ÏŞÖÆ·Ç¶ßµã¿Í»§¶ËµÇÂ½
+//°ÑÔ­ÏÈDr.COMWebLoginID_ ¸Ä³É: Dr.COM1.0WebLoginID_
+/** ¶ßµã²ÎÊı end */
 </script>
 <script>
 var fileVersion="1760953271858";
-/* åŸºæœ¬å¤„ç† */
+/* »ù±¾´¦Àí */
 document.write('<script src="a41.js?version='+fileVersion+'"><\/script>');
 </script>
 </head>

@@ -10,8 +10,21 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <cmocka.h>
+
+/* Extended asserts */
+#define assert_string_contain(str, sub)                                        \
+    _assert_string_contain(str, sub, __FILE__, __LINE__)
+
+static inline void
+_assert_string_contain(const char *const str, const char *const sub,
+                       const char *const file, const int line) {
+    if (strstr(str, sub) == NULL) {
+        _fail(file, line);
+    }
+}
 
 /* Make VSCode happy */
 #ifndef TEST_DIR

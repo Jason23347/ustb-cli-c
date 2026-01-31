@@ -8,39 +8,70 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* cmd_login: 无 env 或指定不存在的 env 时应返回 EXIT_FAILURE */
+#define count(argv)          ((int)(sizeof(argv) / sizeof(argv[0])))
+#define test_call(cmd, argv) cmd(count(argv), (argv))
+
 void
 test_login_no_env_file(void **state) {
-    char *argv_fail[] = {"login", "-c", "/nonexistent/env"};
-    int r = cmd_login(3, argv_fail);
+    char *argv_fail[] = {
+        "login",
+        "-c",
+        "/nonexistent/env",
+    };
+    int r = test_call(cmd_login, argv_fail);
     assert_int_equal(r, EXIT_FAILURE);
 }
 
 void
-test_login(void **state) {
-    int argc = 3;
-    char *argv[] = {"login", "-c", TEST_DIR "/assets/.env.example"};
-    int res = cmd_login(argc, argv);
-    assert_int_equal(res, EXIT_SUCCESS);
+test_login_normal(void **state) {
+    int r;
+    char *argv[] = {
+        "login",
+        "-c",
+        TEST_DIR "/assets/.env.example",
+    };
+    WITH_CAPTURE(out, r = test_call(cmd_login, argv)) {
+        assert_int_equal(r, EXIT_SUCCESS);
+        assert_string_contain(out, "2001:0da8:0208:1145:1419:dead:beaf:6666");
+    }
 }
 
-/* cmd_logout: mock 下从 LOGIN_HOST 读取，应成功返回 */
 void
 test_logout(void **state) {
     char *argv[] = {"logout"};
-    int r = cmd_logout(1, argv);
+    int r = test_call(cmd_logout, argv);
     assert_int_equal(r, EXIT_SUCCESS);
 }
 
-/* cmd_whoami: mock 返回 login_normal.txt 时应有用户名输出 */
 void
-test_whoami(void **state) {
-    WITH_CAPTURE(out, cmd_whoami(1, (char *[]){"whoami"})) {
+test_whoami_without_nid(void **state) {
+    int r;
+
+    char *argv[] = {
+        "whoami",
+    };
+    WITH_CAPTURE(out, r = test_call(cmd_whoami, argv)) {
         IF_TESTING_SITE() { /* Skip */ }
         else {
-            assert_non_null(out);
-            /* login_normal.txt 中 uid='U202412345' */
-            assert_true(strstr(out, "U202412345") != NULL);
+            assert_int_equal(r, EXIT_SUCCESS);
+            assert_string_contain(out, "U202412345");
+        }
+    }
+}
+
+void
+test_whoami_all(void **state) {
+    int r;
+    char *argv[] = {
+        "whoami",
+        "-a",
+    };
+    WITH_CAPTURE(out, r = test_call(cmd_whoami, argv)) {
+        IF_TESTING_SITE() { /* Skip */ }
+        else {
+            assert_int_equal(r, EXIT_SUCCESS);
+            assert_string_contain(out, "U202412345");
+            assert_string_contain(out, "吴彦祖");
         }
     }
 }
