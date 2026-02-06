@@ -5,16 +5,18 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  release:
+    types: [ published ]
 
 jobs:
   build:
     name: Build (${{ matrix.architecture }}, ${{ matrix.build_type }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.architecture == 'aarch64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
 
     strategy:
       fail-fast: false
       matrix:
-        architecture: [ x86_64, ARM64, ARM32 ]
+        architecture: [ x86_64, aarch64 ]
         build_type: [ Debug, Release ]
 
     steps:
@@ -25,44 +27,36 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake make g++ ninja-build
+        run: sudo apt-get update && sudo apt-get install -y cmake make libssl-dev
 
-      # ARM64 工具链（aarch64）
-      - name: Install ARM64 cross-build dependencies
-        if: matrix.architecture == 'ARM64'
-        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
-
-      # ARM32 工具链（armhf）
-      - name: Install ARM32 cross-build dependencies
-        if: matrix.architecture == 'ARM32'
-        run: sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross
-
-      - name: Configure (CMake)
+      - name: CMake Configure
         run: |
           mkdir -p build
           cd build
-
-          case "${{ matrix.architecture }}" in
-            x86_64)
-              echo "🔧 Native x86_64 build"
-              cmake .. \
-                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              ;;
-            ARM64)
-              echo "🔧 Cross-compiling for ARM64"
-              cmake .. \
-                -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
-                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              ;;
-            ARM32)
-              echo "🔧 Cross-compiling for ARM32"
-              cmake .. \
-                -DCMAKE_TOOLCHAIN_FILE=../armhf-toolchain.cmake \
-                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              ;;
-          esac
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DWITH_BALANCE=on \
+            -DWITH_ACCOUNT=on \
+            -DWITH_SPEEDTEST=on \
+            -DWITH_COMPLETION=on \
+            -DGB2312_DECODER=iconv \
+            -DUSE_INTERACTIVE=on \
+            -DUSE_THREADS=on \
+            -DWITH_COLOR=on
 
       - name: Build
         run: |
           cd build
           make -j$(nproc)
+          openssl_version=$(openssl version | awk '{print $2}' | tr '.' '_')
+          echo "OPENSSL_VERSION=$openssl_version" >> $GITHUB_ENV
+          mv ustb-cli ustb-cli-${{ matrix.architecture }}-${{ matrix.build_type }}-openssl-${openssl_version}
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release' && matrix.build_type == 'Release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: build/ustb-cli-${{ matrix.architecture }}-${{ matrix.build_type }}-openssl-${{ env.OPENSSL_VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
