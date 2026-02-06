@@ -95,13 +95,13 @@ const struct cmd_option commands[] = {
         .name = "version",
         .description = "Print version and copyright",
         .cmd_func = &cmd_version,
-        .cmd_help = NULL,
+        .cmd_help = &print_default_help,
     },
     {
         .name = "help",
         .description = "Print this help message",
         .cmd_func = &cmd_help,
-        .cmd_help = NULL,
+        .cmd_help = &print_default_help,
     },
 };
 
@@ -305,18 +305,21 @@ cmd_parse(int argc, char **argv) {
     argc = global_config_parse(argc, argv);
 
     for (size_t i = 0; i < command_count; i++) {
-        if (strcmp(command, commands[i].name) == 0) {
-            cmd_func_t cmd_func = commands[i].cmd_func;
-            cmd_func_t help_func = commands[i].cmd_help;
+        const struct cmd_option *cmd_opt = &commands[i];
+        if (strcmp(command, cmd_opt->name) == 0) {
+            cmd_func_t cmd_func = cmd_opt->cmd_func;
+            cmd_func_t help_func = cmd_opt->cmd_help;
             if (global_config.need_help) {
-                if (help_func != NULL) {
-                    return (*help_func)(argc + 1, argv - 1);
-                }
+                // assume help_func is not NULL
+                return help_func(argc + 1, argv - 1);
             } else {
-                return (*cmd_func)(argc, argv);
+                return cmd_func(argc, argv);
             }
         }
     }
+
+    // Print error message
+    fprintf(stderr, "Unknown command: %s\n", command);
 
     // fallback to print usage info
     return cmd_help(argc + 1, argv - 1);
