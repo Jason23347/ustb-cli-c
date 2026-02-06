@@ -75,7 +75,6 @@ option(USE_INTERACTIVE "Enable interactive input with linenoise" OFF)
 option(USE_THREADS "Enable multi-threaded speedtest implementation" ON)
 set(GB2312_DECODER "iconv" CACHE STRING "Select GB2312 decoding method: iconv, builtin, or disabled")
 set_property(CACHE GB2312_DECODER PROPERTY STRINGS "iconv" "builtin" "disabled")
-set(OPENSSL_ROOT_DIR "" CACHE PATH "OpenSSL root directory (optional)")
 
 message(STATUS "GB2312 decoder selected: ${GB2312_DECODER}")
 
@@ -128,104 +127,106 @@ ENDIF()
 
 target_link_libraries(ustb-cli PRIVATE m)
 
-
 #---------------------------------------
 # OpenSSL
+# 四种情况:
+# 1. 纯粹使用用户指定的 openssl: -DOPENSSL_ROOT_DIR=/path/to/openssl
+# 2. 系统 openssl + 自定义 include: -DOPENSSL_INCLUDE_DIR=/path/to/headers
+# 3. OpenWRT 交叉编译: 未设 OPENSSL_ROOT_DIR 时用 CMAKE_FIND_ROOT_PATH/usr
+# 4. 纯系统 openssl: 不指定任何路径，使用系统默认的 lib 与 include
 #---------------------------------------
-set(OpenSSL_FOUND FALSE)
+
+option(OPENSSL_INCLUDE_DIR "Path to custom OpenSSL headers (optional)" "")
+option(OPENSSL_ROOT_DIR "OpenSSL root directory (optional)" "")
+
+set(OPENSSL_OK FALSE)
+
+# OpenWRT: staging 里 OpenSSL 在 target-xxx/usr 下
+if(NOT OPENSSL_ROOT_DIR AND CMAKE_FIND_ROOT_PATH)
+    list(GET CMAKE_FIND_ROOT_PATH 0 _ROOT)
+    set(OPENSSL_ROOT_DIR "${_ROOT}/usr")
+endif()
 
 if(OPENSSL_ROOT_DIR)
-    # 用户指定了 OpenSSL 路径，使用 pkg-config 查找
-    set(ENV{PKG_CONFIG_PATH} "${OPENSSL_ROOT_DIR}/lib64/pkgconfig:${OPENSSL_ROOT_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
-    find_package(PkgConfig QUIET)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(OPENSSL libssl libcrypto)
-        if(OPENSSL_FOUND)
-            message(STATUS "Found OpenSSL via pkg-config: ${OPENSSL_ROOT_DIR}")
-            message(STATUS "  Libraries: ${OPENSSL_LIBRARIES}")
-            message(STATUS "  Include dirs: ${OPENSSL_INCLUDE_DIRS}")
-            message(STATUS "  Library dirs: ${OPENSSL_LIBRARY_DIRS}")
-            add_definitions(-DWITH_SSL)
-            # Always include the OpenSSL include directory, even if pkg-config doesn't report it
-            target_include_directories(ustb-cli PRIVATE ${OPENSSL_ROOT_DIR}/include ${OPENSSL_INCLUDE_DIRS})
-            target_link_libraries(ustb-cli PRIVATE ${OPENSSL_LIBRARIES})
-            target_link_directories(ustb-cli PRIVATE ${OPENSSL_ROOT_DIR}/lib64 ${OPENSSL_ROOT_DIR}/lib ${OPENSSL_LIBRARY_DIRS})
-            set(OpenSSL_FOUND TRUE)
-        else()
-            message(WARNING "OpenSSL not found via pkg-config at ${OPENSSL_ROOT_DIR}, trying manual search...")
-        endif()
-    endif()
+    set(ENV{PKG_CONFIG_PATH} "${OPENSSL_ROOT_DIR}/lib64/pkgconfig:${OPENSSL_ROOT_DIR}/lib/pkgconfig:${OPENSSL_ROOT_DIR}/usr/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+    set(CMAKE_PREFIX_PATH "${OPENSSL_ROOT_DIR};${CMAKE_PREFIX_PATH}")
+endif()
 
-    # 如果pkg-config失败，使用手动查找
-    if(NOT OpenSSL_FOUND)
-        # Fallback to manual search
-        set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
-        # 同时查找 lib 和 lib64 目录
-        set(OPENSSL_LIB_PATHS
-            "${OPENSSL_ROOT_DIR}/lib64"
-            "${OPENSSL_ROOT_DIR}/lib"
-        )
-        find_library(OPENSSL_SSL_LIBRARY
-            NAMES ssl libssl ssl3 libssl3
-            PATHS ${OPENSSL_LIB_PATHS}
-            NO_DEFAULT_PATH
-        )
-        find_library(OPENSSL_CRYPTO_LIBRARY
-            NAMES crypto libcrypto crypto3 libcrypto3
-            PATHS ${OPENSSL_LIB_PATHS}
-            NO_DEFAULT_PATH
-        )
-        find_path(OPENSSL_INCLUDE_DIR
-            NAMES openssl/ssl.h
-            PATHS "${OPENSSL_ROOT_DIR}/include"
-            NO_DEFAULT_PATH
-        )
-        if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY AND OPENSSL_INCLUDE_DIR)
-            message(STATUS "Found OpenSSL via manual search: ${OPENSSL_ROOT_DIR}")
-            message(STATUS "  SSL Library: ${OPENSSL_SSL_LIBRARY}")
-            message(STATUS "  Crypto Library: ${OPENSSL_CRYPTO_LIBRARY}")
-            message(STATUS "  Include Directory: ${OPENSSL_INCLUDE_DIR}")
-            add_definitions(-DWITH_SSL)
-            target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
-            target_link_libraries(ustb-cli PRIVATE ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
-            set(OpenSSL_FOUND TRUE)
-        else()
-            message(WARNING "OpenSSL not found at ${OPENSSL_ROOT_DIR}, HTTPS support will be disabled")
-            if(NOT OPENSSL_SSL_LIBRARY)
-                message(WARNING "  SSL library not found in ${OPENSSL_LIB_PATHS}")
-            endif()
-            if(NOT OPENSSL_CRYPTO_LIBRARY)
-                message(WARNING "  Crypto library not found in ${OPENSSL_LIB_PATHS}")
-            endif()
-            if(NOT OPENSSL_INCLUDE_DIR)
-                message(WARNING "  Include directory not found at ${OPENSSL_ROOT_DIR}/include")
-            endif()
-        endif()
+find_package(OpenSSL QUIET)
+
+if(OpenSSL_FOUND)
+    # 情况1 或 3: find_package 成功（来自 OPENSSL_ROOT_DIR 或 OpenWRT staging）
+    set(OPENSSL_OK TRUE)
+    message(STATUS "OpenSSL found via find_package")
+    target_compile_definitions(ustb-cli PRIVATE WITH_SSL)
+    target_link_libraries(ustb-cli PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    # 若用户额外指定了 include，则覆盖（用于头文件版本与库不一致等场景）
+    if(OPENSSL_INCLUDE_DIR)
+        message(STATUS "Overriding with custom OpenSSL headers: ${OPENSSL_INCLUDE_DIR}")
+        target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
     endif()
 else()
-    find_package(OpenSSL QUIET)
-    if(OpenSSL_FOUND)
-        message(STATUS "Found OpenSSL: ${OPENSSL_VERSION}")
-        message(STATUS "  SSL Library: ${OPENSSL_SSL_LIBRARY}")
-        message(STATUS "  Crypto Library: ${OPENSSL_CRYPTO_LIBRARY}")
-        message(STATUS "  Include Directory: ${OPENSSL_INCLUDE_DIR}")
-        add_definitions(-DWITH_SSL)
-        target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
-        target_link_libraries(ustb-cli PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-    else()
-        message(STATUS "OpenSSL not found, HTTPS support will be disabled")
-        message(STATUS "OpenSSL not found, command devices will be disabled")
-        message(STATUS "  To enable HTTPS, install OpenSSL or set OPENSSL_ROOT_DIR")
+    # 情况2: 系统 lib + 用户指定 include
+    # 或 情况1 补充: OPENSSL_ROOT_DIR 已设置但 find_package 失败，手动在目录下查找
+    if(OPENSSL_ROOT_DIR)
+        set(_SSL_SEARCH_PATHS
+            "${OPENSSL_ROOT_DIR}/lib64" "${OPENSSL_ROOT_DIR}/lib"
+            "${OPENSSL_ROOT_DIR}/usr/lib64" "${OPENSSL_ROOT_DIR}/usr/lib")
+        set(_INC_SEARCH "${OPENSSL_ROOT_DIR}/include" "${OPENSSL_ROOT_DIR}/usr/include")
+        find_library(SSL_LIB NAMES ssl libssl PATHS ${_SSL_SEARCH_PATHS} NO_DEFAULT_PATH)
+        find_library(CRYPTO_LIB NAMES crypto libcrypto PATHS ${_SSL_SEARCH_PATHS} NO_DEFAULT_PATH)
+        find_path(OPENSSL_INC NAMES openssl/ssl.h PATHS ${_INC_SEARCH} NO_DEFAULT_PATH)
+        if(SSL_LIB AND CRYPTO_LIB AND OPENSSL_INC)
+            set(OPENSSL_OK TRUE)
+            message(STATUS "OpenSSL found in OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
+            target_compile_definitions(ustb-cli PRIVATE WITH_SSL)
+            target_include_directories(ustb-cli PRIVATE ${OPENSSL_INC})
+            target_link_libraries(ustb-cli PRIVATE ${SSL_LIB} ${CRYPTO_LIB})
+        endif()
     endif()
+    if(NOT OPENSSL_OK)
+        # 纯情况2: 系统 lib + 用户指定 OPENSSL_INCLUDE_DIR
+        find_library(SSL_LIB NAMES ssl libssl.so.3)
+        find_library(CRYPTO_LIB NAMES crypto libcrypto.so.3)
+        if(SSL_LIB AND CRYPTO_LIB AND OPENSSL_INCLUDE_DIR)
+            set(OPENSSL_OK TRUE)
+            message(STATUS "Using system OpenSSL libs + custom headers:")
+            message(STATUS "  SSL: ${SSL_LIB}")
+            message(STATUS "  Crypto: ${CRYPTO_LIB}")
+            message(STATUS "  Include: ${OPENSSL_INCLUDE_DIR}")
+            target_compile_definitions(ustb-cli PRIVATE WITH_SSL)
+            target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
+            target_link_libraries(ustb-cli PRIVATE ${SSL_LIB} ${CRYPTO_LIB})
+        endif()
+    endif()
+    if(NOT OPENSSL_OK)
+        # 情况4: 纯系统 openssl（系统 lib + 系统 include）
+        find_library(SSL_LIB NAMES ssl3 libssl.so.3)
+        find_library(CRYPTO_LIB NAMES crypto3 libcrypto.so.3)
+        find_path(OPENSSL_INC NAMES openssl/ssl.h)
+        if(SSL_LIB AND CRYPTO_LIB AND OPENSSL_INC)
+            set(OPENSSL_OK TRUE)
+            message(STATUS "Using system OpenSSL:")
+            message(STATUS "  SSL: ${SSL_LIB}")
+            message(STATUS "  Crypto: ${CRYPTO_LIB}")
+            message(STATUS "  Include: ${OPENSSL_INC}")
+            target_compile_definitions(ustb-cli PRIVATE WITH_SSL)
+            target_include_directories(ustb-cli PRIVATE ${OPENSSL_INC})
+            target_link_libraries(ustb-cli PRIVATE ${SSL_LIB} ${CRYPTO_LIB})
+        endif()
+    endif()
+endif()
+
+if(NOT OPENSSL_OK)
+    message(WARNING "OpenSSL not found, HTTPS disabled")
 endif()
 
 #---------------------------------------
 # Hash library
 #---------------------------------------
 # Use md5.c if no openssl, else use md5_openssl.c
-if(OpenSSL_FOUND)
+if(OPENSSL_OK)
     target_sources(ustb-cli PRIVATE lib/md5_openssl.c)
-    target_include_directories(ustb-cli PRIVATE ${OPENSSL_INCLUDE_DIR})
 else()
     target_sources(ustb-cli PRIVATE lib/md5.c)
 endif()
